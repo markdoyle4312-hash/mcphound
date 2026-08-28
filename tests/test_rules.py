@@ -28,6 +28,22 @@ def test_pinned_npx_is_clean():
     assert "MCP-STATIC-002" not in _finding_ids("mcp-benign.json", "MCP-STATIC-002")
 
 
+def test_overbroad_permissions_rule_fires_on_privileged_docker():
+    assert "MCP-STATIC-003" in _finding_ids("mcp-malicious.json", "MCP-STATIC-003")
+
+
+def test_overbroad_permissions_rule_allows_scoped_mount():
+    assert "MCP-STATIC-003" not in _finding_ids("mcp-benign.json", "MCP-STATIC-003")
+
+
+def test_unpinned_version_rule_fires_on_latest_tag():
+    assert "MCP-STATIC-004" in _finding_ids("mcp-malicious.json", "MCP-STATIC-004")
+
+
+def test_unpinned_version_rule_allows_pinned_version():
+    assert "MCP-STATIC-004" not in _finding_ids("mcp-benign.json", "MCP-STATIC-004")
+
+
 def test_every_finding_is_owasp_mapped():
     for rule in RULES:
         assert rule.get("owasp"), f"{rule['id']} is missing an OWASP mapping"

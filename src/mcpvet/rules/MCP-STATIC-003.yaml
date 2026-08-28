@@ -1,0 +1,17 @@
+id: MCP-STATIC-003
+title: Over-broad host/filesystem permissions in launch command
+owasp: LLM08          # Excessive Agency
+phase: static
+severity: high
+confidence: medium
+description: >
+  The server launch command requests host-level or filesystem-root access
+  (privileged containers, host networking, root volume mounts, disabled
+  browser sandboxing, or a bare "/" path argument) — violating least-privilege
+  and giving a compromised server full host reach instead of a scoped one.
+detect:
+  target: command
+  pattern: '(?i)(--privileged\b|--network[=\s]+host\b|--cap-add[=\s]+all\b|-v\s+/:/|--no-sandbox\b|(?:^|\s)/(?:\s|$))'
+recommendation: Scope volume mounts/paths to the minimum directory needed, drop --privileged/--network=host/--cap-add=ALL, and keep browser sandboxing enabled.
+references:
+  - https://labs.cloudsecurityalliance.org/agentic/agentic-mcp-security-best-practices-v1/

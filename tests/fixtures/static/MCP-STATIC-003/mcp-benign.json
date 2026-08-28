@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPVET-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "docker",
+      "args": ["run", "--rm", "-v", "/home/user/project:/workspace", "mcp/some-server@1.0.0"]
+    }
+  }
+}

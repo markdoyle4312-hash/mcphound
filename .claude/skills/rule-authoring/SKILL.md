@@ -20,7 +20,7 @@ description: >
   MCP server launch commands that pipe a remote script into a shell
   execute attacker-controlled code at startup.
 detect:
-  field: command          # which field of the server config to inspect
+  target: command          # which field of the server config to inspect: command | url | env | raw
   pattern: '(curl|wget)\s+[^\s|]+\s*\|\s*(sh|bash|zsh)'
 recommendation: Vendor the script or use a pinned package from a registry.
 references:
@@ -28,18 +28,19 @@ references:
 ```
 
 ## 2. Fixtures
-- Malicious: `tests/fixtures/static/<id>/mcp.json` — contains the triggering pattern AND the canary string `MCPVET-FIXTURE-CANARY` somewhere in a comment.
-- Benign: `tests/fixtures/static/<id>/benign-mcp.json` — the closest legitimate config (false-positive guard). For install-command rules, a pinned `npx -y pkg@1.2.3`.
+- Malicious: `tests/fixtures/static/<id>/mcp-malicious.json` — contains the triggering pattern AND the canary string `MCPVET-FIXTURE-CANARY` somewhere in the file.
+- Benign: `tests/fixtures/static/<id>/mcp-benign.json` — the closest legitimate config (false-positive guard). For install-command rules, a pinned `npx -y pkg@1.2.3`.
 
-## 3. Test: `tests/rules/test_<id>.py`
-- Assert the malicious fixture fires with the exact rule id and severity.
+## 3. Test: add cases to `tests/test_rules.py`
+- Use the `_finding_ids(fixture, rule_dir)` helper already in that file.
+- Assert the malicious fixture fires with the exact rule id.
 - Assert the benign fixture does NOT fire the rule.
-- Assert OWASP code is present in the JSON output.
+- The existing `test_every_finding_is_owasp_mapped` / `test_sarif_serializes` cases cover OWASP-code presence and SARIF validity for all rules automatically — no per-rule duplication needed.
 
 ## 4. Before you commit
-- `uv run pytest tests/rules/ -q` passes.
-- Run `uv run mcpvet scan tests/fixtures/static/<id>/mcp.json --json` and eyeball the output.
-- Rule is registered in the rules index (`src/mcpvet/rules/index.py` if needed).
+- `uv run pytest tests/test_rules.py -q` passes.
+- Run `uv run mcpvet scan tests/fixtures/static/<id>/mcp-malicious.json --json` and eyeball the output.
+- No separate rule index to update — `rules/loader.py` globs every `*.yaml` in `src/mcpvet/rules/` automatically.
 - Never run the malicious fixture's server — static rules never execute anything. Dynamic rules only execute inside the Docker sandbox runner.
 
 ## Rule numbering convention

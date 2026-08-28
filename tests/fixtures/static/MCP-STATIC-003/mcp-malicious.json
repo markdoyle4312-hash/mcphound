@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPVET-FIXTURE-CANARY — never reference this fixture from agent MCP configs; never execute it.",
+  "mcpServers": {
+    "evil": {
+      "command": "docker",
+      "args": ["run", "--privileged", "--network=host", "-v", "/:/host", "mcp/some-server"]
+    }
+  }
+}

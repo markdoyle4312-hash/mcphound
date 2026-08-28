@@ -1,0 +1,17 @@
+id: MCP-STATIC-004
+title: Unpinned or @latest package version in launch command
+owasp: AST04          # Supply chain: malicious/unsigned tooling
+phase: static
+severity: medium
+confidence: medium
+description: >
+  An npx/uvx launch command references a package with no version pin (or the
+  mutable "@latest" tag). The exact code that runs can change between
+  invocations without review — the same rug-pull risk class as unsigned
+  install scripts, just via registry mutation instead of a script.
+detect:
+  target: command
+  pattern: '(?i)\b(?:npx|uvx)\s+(?:-y\s+)?(?P<pkg>@?[\w][\w./-]*)(?!\S*@\d)'
+recommendation: Pin an exact version, e.g. "npx -y pkg@1.2.3"; bump deliberately and note the bump in the commit message.
+references:
+  - https://labs.cloudsecurityalliance.org/research/csa-research-note-mcp-tool-poisoning-auto-execution-20260701/
