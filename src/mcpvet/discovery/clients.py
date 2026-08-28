@@ -90,6 +90,42 @@ def _strip_jsonc(text: str) -> str:
     return "".join(out)
 
 
+def _strip_trailing_commas(text: str) -> str:
+    """Remove trailing commas before } or ] (JSONC/JSON5 allows them; json.loads doesn't)."""
+    out = []
+    i = 0
+    n = len(text)
+    in_string = False
+    escape = False
+    while i < n:
+        ch = text[i]
+        if in_string:
+            out.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+        if ch == '"':
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == ",":
+            j = i + 1
+            while j < n and text[j] in " \t\r\n":
+                j += 1
+            if j < n and text[j] in "}]":
+                i += 1
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _as_command_list(entry: dict) -> list[str]:
     cmd = entry.get("command")
     args = [str(a) for a in entry.get("args", [])]
@@ -106,6 +142,7 @@ def load_servers(path: Path) -> list[ServerConfig]:
     text = path.read_text()
     if path.suffix == ".jsonc":
         text = _strip_jsonc(text)
+        text = _strip_trailing_commas(text)
     data = json.loads(text)
 
     raw_servers = data.get("mcpServers") or data.get("mcp") or {}

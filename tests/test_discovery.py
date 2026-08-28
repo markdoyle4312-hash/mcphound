@@ -66,6 +66,17 @@ def test_opencode_jsonc_with_comments(tmp_path):
     assert servers[0].transport == "stdio"
 
 
+def test_opencode_jsonc_with_trailing_comma(tmp_path):
+    cfg = tmp_path / "opencode.jsonc"
+    cfg.write_text(
+        '{"mcp": {"ctx": {"type": "local", '
+        '"command": ["npx", "-y", "@upstash/context7-mcp@1.0.0"],}, }}'
+    )
+    servers = load_servers(cfg)
+    assert len(servers) == 1
+    assert servers[0].transport == "stdio"
+
+
 def test_http_transport_detected_from_url():
     servers = load_servers(_config_fixture("claude_desktop.json"))
     servers[0].url = "https://example.com/mcp"
