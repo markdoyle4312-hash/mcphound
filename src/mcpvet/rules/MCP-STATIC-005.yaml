@@ -1,0 +1,18 @@
+id: MCP-STATIC-005
+title: Tool-description injection markers in server config
+owasp: LLM01          # Prompt Injection
+phase: static
+severity: critical
+confidence: medium
+description: >
+  The server's config entry contains hidden HTML/XML comment blocks, zero-width
+  Unicode characters, or exfiltration-imperative phrasing ("ignore previous
+  instructions", "send ... to", "do not tell the user"). These are the
+  documented tool-poisoning markers used to plant instructions a human
+  reviewer won't see but an LLM reading the tool/description text will.
+detect:
+  target: raw
+  pattern: "(?i)([\\u200b\\u200c\\u200d\\ufeff\\u2060]|<!--[\\s\\S]*?-->|ignore\\s+(?:all\\s+)?previous\\s+instructions|do\\s+not\\s+tell\\s+the\\s+user|without\\s+(?:informing|telling)\\s+the\\s+user|send\\s+(?:this|it|the\\s+\\w+)\\s+to\\s+)"
+recommendation: Remove hidden/zero-width content and imperative phrasing from server metadata; review the server's actual tool descriptions via the MCP Inspector before trusting it.
+references:
+  - https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks

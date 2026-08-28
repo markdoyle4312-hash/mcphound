@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPVET-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@1.0.0"]
+    }
+  }
+}

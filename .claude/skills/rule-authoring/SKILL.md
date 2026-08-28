@@ -27,6 +27,22 @@ references:
   - https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks
 ```
 
+Most detections are a regex against `target` text — that's "rules are data, not code." One
+exception exists: **typosquat checks need edit-distance, not a regex**, so they use a second
+`detect` shape with dedicated engine support in `rules/engine.py`:
+
+```yaml
+detect:
+  type: typosquat
+  target: command                        # only "command" is supported today
+  reference_list: known_servers.yaml     # YAML list under src/mcpvet/rules/data/
+  max_distance: 2                        # flag names within N edits of a reference name,
+                                          # but not an exact match (exact = it IS that package)
+```
+
+Don't add a third `detect.type` casually — every new type is engine code, not a community-PR-able
+YAML rule. Prefer extending the regex path unless the check is genuinely not regex-expressible.
+
 ## 2. Fixtures
 - Malicious: `tests/fixtures/static/<id>/mcp-malicious.json` — contains the triggering pattern AND the canary string `MCPVET-FIXTURE-CANARY` somewhere in the file.
 - Benign: `tests/fixtures/static/<id>/mcp-benign.json` — the closest legitimate config (false-positive guard). For install-command rules, a pinned `npx -y pkg@1.2.3`.

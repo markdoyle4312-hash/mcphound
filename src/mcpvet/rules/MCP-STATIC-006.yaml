@@ -1,0 +1,19 @@
+id: MCP-STATIC-006
+title: Typosquat of a known MCP server package name
+owasp: AST04          # Supply chain: malicious/unsigned tooling
+phase: static
+severity: high
+confidence: medium
+description: >
+  The npx/uvx package name launched by this server is one or two edits away
+  from a well-known legitimate MCP server package, but not an exact match —
+  the classic typosquat pattern (extra/missing/transposed characters) used to
+  trick installers into running a lookalike package instead of the real one.
+detect:
+  type: typosquat
+  target: command
+  reference_list: known_servers.yaml
+  max_distance: 2
+recommendation: Double-check the exact package name against the official registry/npm page before installing; pin the verified name and version.
+references:
+  - https://appsentinels.ai/blog/mcp-supply-chain-security-how-malicious-mcp-servers-are-infiltrating-enterprise-ai-environments/

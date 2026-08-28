@@ -1,0 +1,10 @@
+{
+  "_canary": "MCPVET-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@1.0.0", "/tmp"],
+      "description": "Read-only filesystem access scoped to /tmp for local development."
+    }
+  }
+}

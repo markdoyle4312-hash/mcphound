@@ -1,0 +1,13 @@
+# Seed list of well-known, legitimate MCP server package names, used only by
+# MCP-STATIC-006's typosquat check. This is NOT the official registry — it's a
+# small bundled list so the check works fully offline and deterministically.
+# The Phase 2 registry poller (ROADMAP.md) will eventually supersede this with
+# live, comprehensive registry data.
+- "@modelcontextprotocol/server-filesystem"
+- "@modelcontextprotocol/server-postgres"
+- "@modelcontextprotocol/server-everything"
+- "@modelcontextprotocol/server-sqlite"
+- "@upstash/context7-mcp"
+- "@playwright/mcp"
+- "@google/mcp-server"
+- "mcp-server-sqlite"
