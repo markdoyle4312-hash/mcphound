@@ -5,6 +5,18 @@ description = "Independent security scanner and reputation layer for MCP servers
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
+authors = [{ name = "marky-dooda08", email = "mark.doyle4312@gmail.com" }]
+keywords = ["mcp", "security", "supply-chain", "ai-agents", "sarif"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Environment :: Console",
+]
 dependencies = [
   "typer>=0.12",
   "pydantic>=2.7",
@@ -13,6 +25,12 @@ dependencies = [
   "rapidfuzz>=3.9",
   "httpx>=0.27",
 ]
+
+[project.urls]
+Homepage = "https://github.com/markdoyle4312-hash/mcpvet"
+Repository = "https://github.com/markdoyle4312-hash/mcpvet"
+Issues = "https://github.com/markdoyle4312-hash/mcpvet/issues"
+Changelog = "https://github.com/markdoyle4312-hash/mcpvet/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
