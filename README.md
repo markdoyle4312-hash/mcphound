@@ -17,11 +17,13 @@ Local scanning is covered by [mcp-scan](https://github.com/invariantlabs-ai/mcp-
 ## Quickstart
 
 ```bash
-# inspect what you have (never executes a server)
-uvx mcpvet inspect
+# published on PyPI as "mcp-vet" (the bare name "mcpvet" belongs to an
+# unrelated package) — the installed command is still "mcpvet"
+uvx --from mcp-vet mcpvet inspect   # inspect what you have (never executes a server)
+uvx --from mcp-vet mcpvet scan      # scan auto-discovered configs
 
-# scan auto-discovered configs
-uvx mcpvet scan
+# or install once and drop the --from:
+# pip install mcp-vet / uv tool install mcp-vet
 
 # CI: fail on high/critical findings, emit SARIF
 mcpvet scan .mcp.json --fail-on high --sarif -o mcpvet.sarif

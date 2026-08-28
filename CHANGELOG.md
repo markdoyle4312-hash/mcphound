@@ -84,10 +84,12 @@ malicious fixture, a benign fixture (false-positive guard), and a pytest.
   registry poller will supersede it.
 - PyPI packages (`uvx`-launched) aren't covered by MCP-STATIC-007 yet, only
   npm/`npx`.
-- **The `mcpvet` name is already taken on PyPI** by an unrelated package
-  (a pytest/eslint-based MCP contract-testing tool). Publishing under this
-  name is blocked until the project is renamed or the conflict is otherwise
-  resolved — see the release-prep report for alternatives considered.
+- The PyPI *distribution name* is `mcp-vet`, not `mcpvet` — the `mcpvet`
+  name on PyPI belongs to an unrelated package (a pytest/eslint-based MCP
+  contract-testing tool). The importable module and CLI command are still
+  `mcpvet` (`pip install mcp-vet` gives you the `mcpvet` command), but a
+  bare `uvx mcpvet ...` will fetch the *other* project — always install
+  with `uvx --from mcp-vet mcpvet scan` (or `pip install mcp-vet` first).
 
 ### Dogfood / canary results
 - `mcpvet scan .mcp.json opencode.jsonc --fail-on high`: zero findings against
