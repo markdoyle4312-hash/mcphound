@@ -1,0 +1,39 @@
+# mcp-policy.yaml — enforce which MCP servers your organisation allows.
+# Used by `mcpvet allowlist enforce` and the GitHub Action (Phase 4, W18+).
+version: 1
+
+# Default posture for any server not listed below.
+default: deny          # allow | ask | deny
+
+servers:
+  # Explicit allow entries: pin by name AND version/hash where the client supports it.
+  context7:
+    action: allow
+    max_major_version: 1
+  github:
+    action: allow
+    transport: http
+  playwright:
+    action: ask        # browser automation: require human sign-off per repo
+  postgres:
+    action: allow
+    env_required: ["MCPVET_DATABASE_URL_RO"]  # DSN must come from env, never literal
+
+blocked_patterns:
+  # Block any server matching these name/regex patterns (typosquats etc.).
+  - ".*context[0-9l].*"
+  - ".*githubcopilot\\.(?!com).*"
+
+rules:
+  fail_on: high              # low | medium | high | critical
+  require_pinned_versions: true
+  forbid_latest_tag: true
+  forbid_env_literals: true  # no literal tokens in env blocks
+  allowed_transports: ["stdio", "http"]
+
+# Compliance mapping (v1.1+): which framework reports findings are emitted for.
+reports:
+  - owasp-llm
+  - owasp-agentic
+  # - eu-ai-act
+  # - ism-e8      # Australian ISM / Essential Eight (sovereign tier)

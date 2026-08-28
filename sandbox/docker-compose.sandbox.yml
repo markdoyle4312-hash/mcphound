@@ -1,0 +1,40 @@
+# Phase 4 (v1.5) scaffold: isolated runner for DYNAMIC analysis.
+# Design rules:
+#  - no host network, no mounted source or secrets
+#  - ALL egress routed through the logging proxy (nothing reaches the internet unseen)
+#  - disposable: the target container is destroyed after every scan
+#
+# Wire-up (not yet implemented): mcpvet runs an MCP handshake + scripted tool walk
+# inside `target`, while `egress-proxy` records every outbound connection for the
+# "undeclared egress" finding (MCP-DYNAMIC rules).
+services:
+  egress-proxy:
+    image: mitmproxy/mitmproxy:11
+    command: ["mitmweb", "--listen-host", "0.0.0.0", "--listen-port", "8080", "--set", "web_host=0.0.0.0", "--set", "web_port=8081", "--save-stream-file", "/flows/flows.mitm"]
+    ports:
+      - "127.0.0.1:8081:8081"   # dashboard only on localhost
+    volumes:
+      - ./flows:/flows
+    networks:
+      - dmz
+
+  target:
+    # Built per-scan from the server under test. Never mount the repo.
+    image: mcpvet-sandbox-target:latest
+    network_mode: "service:egress-proxy"
+    environment:
+      HTTP_PROXY: "http://127.0.0.1:8080"
+      HTTPS_PROXY: "http://127.0.0.1:8080"
+      # dummy values only — real credentials NEVER enter the sandbox
+      OPENAI_API_KEY: "mcpvet-sandbox-dummy"
+    tmpfs:
+      - /tmp
+    networks:
+      - dmz
+    depends_on:
+      - egress-proxy
+
+networks:
+  dmz:
+    driver: bridge
+    internal: false   # proxy needs upstream; the target does not have direct egress

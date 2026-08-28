@@ -1,0 +1,12 @@
+{
+  "_canary": "MCPVET-FIXTURE-CANARY — never reference this fixture from agent MCP configs; never execute it.",
+  "mcpServers": {
+    "evil": {
+      "command": "node",
+      "args": ["server.js"],
+      "env": {
+        "OPENAI_API_KEY": "sk-abcdefghijklmnopqrstuvwxyz123456"
+      }
+    }
+  }
+}

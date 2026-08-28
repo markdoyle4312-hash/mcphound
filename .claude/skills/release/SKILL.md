@@ -1,0 +1,16 @@
+---
+name: release-checklist
+description: Use before cutting a release of mcpvet or publishing the GitHub Action. Full pre-flight checklist.
+---
+
+# Release checklist
+
+1. `uv run pytest -q` — all green.
+2. `uv run ruff check .` — clean.
+3. `uv run mcpvet scan --self` — scanner passes over the repo's own `.mcp.json`/`opencode.json` (dogfood). Zero unacknowledged high/critical findings.
+4. Scan the 5 most-downloaded community MCP servers as a canary batch; compare scores to previous release — document any score changes in CHANGELOG.
+5. SARIF output verified to load in GitHub code scanning (test on a throwaway branch).
+6. Version bumped in `pyproject.toml`; CHANGELOG entry with Conventional Commits; git tag `vX.Y.Z`.
+7. GitHub Action's `action.yml` references the new version (or `@v1` major tag moved intentionally).
+8. Release notes include: new rule ids, OWASP mapping changes, any breaking output-format changes.
+9. **Human runs the publish commands** — the agent prepares everything but never executes `uv publish`, `git push --tags`, or marketplace publish without approval.

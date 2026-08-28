@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPVET-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres@0.6.2"]
+    }
+  }
+}

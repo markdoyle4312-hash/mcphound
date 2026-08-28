@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(uv run pytest*)",
+      "Bash(uv run ruff*)",
+      "Bash(uv run mcpvet*)",
+      "Bash(docker build*)",
+      "Bash(docker compose*)",
+      "Bash(docker images*)",
+      "Bash(docker ps*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git tag*)",
+      "Bash(npm publish*)",
+      "Bash(uv publish*)",
+      "Bash(docker run*)",
+      "Bash(npx *)",
+      "Bash(uvx *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(sudo *)",
+      "Bash(curl * | sh*)",
+      "Bash(wget * | sh*)",
+      "Bash(npx *fixture*)",
+      "Bash(uvx *fixture*)",
+      "Bash(node *fixture*)",
+      "Bash(python *fixture*)",
+      "Read(./.env)",
+      "Read(**/.env)"
+    ]
+  },
+  "enabledMcpjsonServers": ["context7", "github", "playwright", "postgres"],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/on-edit.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

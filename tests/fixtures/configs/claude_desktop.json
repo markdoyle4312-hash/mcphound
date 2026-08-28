@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "claude-desktop-server": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@1.0.0", "/tmp"],
+      "env": {
+        "MY_VAR": "value"
+      }
+    }
+  }
+}

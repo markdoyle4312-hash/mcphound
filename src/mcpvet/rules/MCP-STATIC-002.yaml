@@ -1,0 +1,16 @@
+id: MCP-STATIC-002
+title: Remote code download-and-execute in launch command
+owasp: AST04          # Supply chain: malicious/unsigned tooling
+phase: static
+severity: critical
+confidence: high
+description: >
+  The server launch command pipes a remote download straight into a shell
+  (curl|sh / wget|sh), executing unversioned remote code at every startup —
+  the rug-pull / supply-chain kill chain in one line.
+detect:
+  target: command
+  pattern: '(curl|wget)\s+[^|]+\|\s*(sh|bash|zsh)'
+recommendation: Install a pinned package from a registry; vendor the script; verify signatures.
+references:
+  - https://labs.cloudsecurityalliance.org/research/csa-research-note-mcp-tool-poisoning-auto-execution-20260701/

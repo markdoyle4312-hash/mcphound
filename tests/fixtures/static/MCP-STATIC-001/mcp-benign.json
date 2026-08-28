@@ -1,0 +1,12 @@
+{
+  "_canary": "MCPVET-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "npx",
+      "args": ["-y", "@some/mcp-server@1.2.3"],
+      "env": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}

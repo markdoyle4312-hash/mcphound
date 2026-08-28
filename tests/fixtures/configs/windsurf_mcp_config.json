@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "windsurf-server": {
+      "type": "stdio",
+      "command": ["python", "-m", "my_mcp_server"],
+      "args": ["--port", "8080"]
+    }
+  }
+}

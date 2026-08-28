@@ -1,0 +1,101 @@
+{
+  // OpenCode config. .jsonc is fine for OpenCode. Secrets live in ~/.config/opencode/opencode.json (global) — NEVER in this repo file.
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-6",
+  "small_model": "anthropic/claude-haiku-4-5",
+  "share": "disabled",
+  "autoshare": false,
+  "instructions": ["./CLAUDE.md"],
+
+  "formatter": {
+    "*.py": { "command": ["ruff", "format", "-"] }
+  },
+
+  "mcp": {
+    // Keep the active set small (3-4) — every added server is attack surface and tool-selection noise.
+    // Version pins are the supply-chain control; bump deliberately, never with @latest.
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp@1.0.0"],
+      "enabled": true
+    },
+      "github": {
+        "type": "remote",
+        "url": "https://api.githubcopilot.com/mcp/",
+        "enabled": true,
+        "oauth": false,
+        "headers": {
+          "Authorization": "Bearer {env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+          }
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp@0.0.40"],
+      "enabled": true
+    }
+  },
+
+  // Least privilege, ask-by-default for anything destructive or that executes code.
+  "permission": {
+    "bash": {
+      "rm -rf *": "deny",
+      "sudo *": "deny",
+      "curl * | sh*": "deny",
+      "*fixture*": "deny",
+      "git push*": "ask",
+      "git tag*": "ask",
+      "uv publish*": "ask",
+      "docker run*": "ask",
+      "npx *": "ask",
+      "uvx *": "ask",
+      "uv run pytest*": "allow",
+      "uv run ruff*": "allow",
+      "uv run mcpvet*": "allow",
+      "docker build*": "allow",
+      "docker compose*": "allow",
+      "*": "ask"
+    },
+    "external_directory": { "*": "deny" },
+    "read": { "*": "allow" },
+    "glob": { "*": "allow" },
+    "grep": { "*": "allow" },
+    "edit": { "*": "ask" },
+    "*": "ask"
+  },
+
+  "agent": {
+    // Read-only independent reviewer: use for "review what Claude Code just wrote".
+    "auditor": {
+      "description": "Read-only adversarial reviewer: checks code, rules and claims. Cannot edit or run mutating commands.",
+      "mode": "primary",
+      "model": "openai/gpt-5",
+      "tools": {
+        "read": true, "grep": true, "glob": true, "webfetch": true,
+        "edit": false, "write": false, "bash": false
+      }
+    },
+    // Adversarial test author for the detection rules.
+    "redteam": {
+      "description": "Crafts evasive poisoned-MCP fixtures to attack mcpvet's detectors. Sandbox-only.",
+      "mode": "subagent",
+      "prompt": "Read CLAUDE.md SAFETY RULES. Every fixture must contain MCPVET-FIXTURE-CANARY, never execute fixtures on the host (Docker sandbox only), never use real external endpoints.",
+      "tools": {
+        "read": true, "grep": true, "glob": true, "write": true, "edit": true,
+        "bash": true
+      },
+      "permission": {
+        "bash": {
+          "docker run*": "ask",
+          "*fixture*": "deny"
+        }
+      }
+    }
+  },
+
+  // Custom slash commands (project commands live in .opencode/command/ too)
+  "command": {
+    "review": { "template": "Run the redteam agent against the changed rules, then the auditor agent on the diff: $ARGUMENTS" },
+    "rules": { "template": "Follow the rule-authoring skill to implement a detection rule for: $ARGUMENTS" }
+  },
+
+}

@@ -1,0 +1,21 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9  # pin to a real release
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.0  # pin
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: mcpvet-self-scan
+        name: mcpvet self-scan of agent MCP configs
+        language: system
+        entry: scripts/self-scan.sh
+        files: '(\.mcp\.json|opencode\.jsonc?|\.claude/settings\.json)$'
+        pass_filenames: false
