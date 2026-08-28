@@ -19,10 +19,10 @@ metadata. Every finding maps to an OWASP LLM Top 10 or Agentic/MCP Top 10
 code. Output is human-readable by default, or `--json` / `--sarif` for
 tooling and GitHub code scanning, with `--fail-on` exit codes for CI.
 
-Install and run:
+Install and run (published on PyPI as `mcp-vet`; the CLI command is `mcpvet`):
 
 ```bash
-uvx mcpvet scan
+uvx --from mcp-vet mcpvet scan
 ```
 
 ### Detection rules
