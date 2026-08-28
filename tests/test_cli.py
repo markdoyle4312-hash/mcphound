@@ -23,6 +23,17 @@ def test_inspect_skips_missing_config():
     assert "No MCP configurations found." in result.stdout
 
 
+def test_scan_output_flag_writes_to_file(tmp_path):
+    runner = CliRunner()
+    out = tmp_path / "results.json"
+    cfg = FIXTURES / "static" / "MCP-STATIC-001" / "mcp-malicious.json"
+    result = runner.invoke(app, ["scan", str(cfg), "--json", "-o", str(out)])
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    data = json.loads(out.read_text())
+    assert data["findings"]
+
+
 def _finding_rule_ids(stdout: str) -> set[str]:
     return {f["rule_id"] for f in json.loads(stdout)["findings"]}
 

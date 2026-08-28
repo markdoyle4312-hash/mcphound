@@ -79,22 +79,32 @@ def scan(
             "Slower and not fully deterministic offline; off by default.",
         ),
     ] = False,
+    output: Annotated[
+        Path | None,
+        typer.Option("-o", "--output", help="Write output to this file instead of stdout"),
+    ] = None,
 ):
     """Scan MCP configurations for security issues (static analysis only)."""
     result = _collect(config, deep=deep)
 
     if sarif:
-        typer.echo(json.dumps(to_sarif(result), indent=2))
+        text = json.dumps(to_sarif(result), indent=2)
     elif as_json:
-        typer.echo(to_json(result))
+        text = to_json(result)
     else:
-        typer.echo(f"Scanned {len(result.servers)} server(s) from {len(result.targets)} config(s).")
+        lines = [f"Scanned {len(result.servers)} server(s) from {len(result.targets)} config(s)."]
         for f in result.findings:
-            typer.echo(
+            lines.append(
                 f"  [{f.severity.upper():<8}] {f.rule_id:<16} {f.server or '-':<16} {f.title}"
             )
         if not result.findings:
-            typer.echo("  No findings.")
+            lines.append("  No findings.")
+        text = "\n".join(lines)
+
+    if output:
+        output.write_text(text + "\n", encoding="utf-8")
+    else:
+        typer.echo(text)
 
     if fail_on and fail_on in SEVERITY_ORDER:
         if any(SEVERITY_ORDER[f.severity] >= SEVERITY_ORDER[fail_on] for f in result.findings):
