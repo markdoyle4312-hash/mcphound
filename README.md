@@ -25,6 +25,10 @@ uvx mcpvet scan
 
 # CI: fail on high/critical findings, emit SARIF
 mcpvet scan .mcp.json --fail-on high --sarif -o mcpvet.sarif
+
+# opt-in: also run network-dependent checks (npm registry provenance) — slower,
+# not fully deterministic offline, so it's off unless you ask for it
+mcpvet scan --deep
 ```
 
 ## Development

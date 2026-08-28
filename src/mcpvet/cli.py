@@ -20,13 +20,15 @@ app = typer.Typer(
 )
 
 
-def _collect(paths: list[Path] | None) -> ScanResult:
+def _collect(paths: list[Path] | None, deep: bool = False) -> ScanResult:
     config_paths = paths or discover_configs()
     servers = []
     for p in config_paths:
         if p.exists():
             servers.extend(load_servers(p))
     rules = load_rules()
+    if not deep:
+        rules = [r for r in rules if not r.get("network")]
     findings = []
     for server in servers:
         findings.extend(evaluate(server, rules))
@@ -69,9 +71,17 @@ def scan(
         str | None,
         typer.Option("--fail-on", help="Exit 1 on finding >= severity (low|medium|high|critical)"),
     ] = None,
+    deep: Annotated[
+        bool,
+        typer.Option(
+            "--deep",
+            help="Also run network-dependent checks (e.g. npm registry provenance). "
+            "Slower and not fully deterministic offline; off by default.",
+        ),
+    ] = False,
 ):
     """Scan MCP configurations for security issues (static analysis only)."""
-    result = _collect(config)
+    result = _collect(config, deep=deep)
 
     if sarif:
         typer.echo(json.dumps(to_sarif(result), indent=2))

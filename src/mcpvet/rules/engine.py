@@ -16,6 +16,13 @@ Static rules only at this stage. A rule's `detect` block is one of two shapes:
     max_distance: <int>                    (flag names within this Levenshtein distance
                                             of a reference name, but not an exact match)
 
+  npm provenance (`type: npm_provenance`) — queries the public npm registry, so it
+  is NOT part of the default free scan (GOVERNANCE.md: network-dependent checks
+  must be marked and separable). Any rule using it MUST also set `network: true`;
+  `cli.py` filters such rules out unless `--deep` is passed:
+    type: npm_provenance
+    target: command                        (only npx-launched packages are checked)
+
 One finding per rule per server (first match wins).
 """
 
@@ -26,12 +33,14 @@ import json
 import re
 from pathlib import Path
 
+import httpx
 import yaml
 from rapidfuzz.distance import Levenshtein
 
 from ..models import Finding, ServerConfig
 
 _DATA_DIR = Path(__file__).parent / "data"
+_NPM_TIMEOUT = 5.0
 
 
 def _target_text(server: ServerConfig, target: str) -> str:
@@ -121,14 +130,47 @@ def _evaluate_typosquat(server: ServerConfig, rule: dict, detect: dict) -> list[
     return [_make_finding(rule, server, detail)]
 
 
+def _fetch_npm_metadata(pkg: str) -> dict | None:
+    """Isolated so tests can monkeypatch it instead of hitting the real registry."""
+    try:
+        resp = httpx.get(f"https://registry.npmjs.org/{pkg}", timeout=_NPM_TIMEOUT)
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.HTTPError:
+        return None
+
+
+def _evaluate_npm_provenance(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
+    if "npx" not in server.command:
+        return []
+    pkg = _extract_command_package(server)
+    if not pkg:
+        return []
+    meta = _fetch_npm_metadata(pkg)
+    if meta is None:
+        # Network error or unknown package: no data to judge on, so no finding —
+        # never let a provenance check fail closed against an offline/rate-limited registry.
+        return []
+    latest = meta.get("dist-tags", {}).get("latest")
+    version_info = meta.get("versions", {}).get(latest, {}) if latest else {}
+    repo = version_info.get("repository") or meta.get("repository")
+    if repo:
+        return []
+    detail = f'npm package "{pkg}" has no repository field in its registry metadata'
+    return [_make_finding(rule, server, detail)]
+
+
 def evaluate(server: ServerConfig, rules: list[dict]) -> list[Finding]:
     findings: list[Finding] = []
     for rule in rules:
         if rule.get("phase", "static") != "static":
             continue
         detect = rule.get("detect") or {}
-        if detect.get("type") == "typosquat":
+        detect_type = detect.get("type")
+        if detect_type == "typosquat":
             findings.extend(_evaluate_typosquat(server, rule, detect))
+        elif detect_type == "npm_provenance":
+            findings.extend(_evaluate_npm_provenance(server, rule, detect))
         else:
             findings.extend(_evaluate_regex(server, rule, detect))
     return findings

@@ -10,7 +10,7 @@ Every rule MUST land with four artifacts: YAML rule, malicious fixture, benign f
 ## 1. Rule file: `src/mcpvet/rules/<id>.yaml`
 
 ```yaml
-id: MCP-STATIC-007
+id: MCP-STATIC-0xx        # next unused number — check src/mcpvet/rules/ before picking one
 title: Dangerous install command (curl pipe shell)
 owasp: LLM01            # LLMxx = OWASP LLM Top10, ASTxx = OWASP Agentic Top10
 phase: static           # static | dynamic
@@ -40,7 +40,23 @@ detect:
                                           # but not an exact match (exact = it IS that package)
 ```
 
-Don't add a third `detect.type` casually — every new type is engine code, not a community-PR-able
+A third exists for checks that need live registry data — **npm provenance**:
+
+```yaml
+network: true             # REQUIRED alongside this detect.type — see below
+detect:
+  type: npm_provenance
+  target: command          # only npx-launched packages are checked
+```
+
+Any rule whose `detect` needs the network (not just this one) MUST set the top-level `network: true`
+field. `cli.py`'s `_collect()` filters those rules out unless `--deep` is passed — per
+GOVERNANCE.md, network-dependent checks must be marked and kept separable from the default free
+scan. The actual HTTP call must live in its own small function (see `_fetch_npm_metadata` in
+`rules/engine.py`) so tests can `monkeypatch` it instead of hitting the real registry — `pytest`
+must never make live network calls.
+
+Don't add a fourth `detect.type` casually — every new type is engine code, not a community-PR-able
 YAML rule. Prefer extending the regex path unless the check is genuinely not regex-expressible.
 
 ## 2. Fixtures
