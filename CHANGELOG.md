@@ -4,7 +4,7 @@ All notable changes to mcpvet are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); this project doesn't use
 SemVer strictly pre-1.0 (see ROADMAP.md).
 
-## [Unreleased] — v0.1.0
+## [0.1.0] — 2026-08-29
 
 First public release. Static-only scanning; nothing here ever executes an
 MCP server.

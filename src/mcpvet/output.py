@@ -5,10 +5,19 @@ from __future__ import annotations
 from .models import ScanResult
 
 _SARIF_LEVEL = {"low": "note", "medium": "warning", "high": "error", "critical": "error"}
+_INFORMATION_URI = "https://github.com/markdoyle4312-hash/mcpvet"
 
 
 def to_json(result: ScanResult) -> str:
     return result.model_dump_json(indent=2)
+
+
+def _artifact_uri(location: str) -> str:
+    # location is "<config path> :: <server name>", built for human display
+    # (see rules/engine.py); SARIF's artifactLocation.uri must be a URI, so
+    # take just the path and normalize Windows separators.
+    path = location.split(" :: ", 1)[0] or "config"
+    return path.replace("\\", "/")
 
 
 def to_sarif(result: ScanResult) -> dict:
@@ -28,9 +37,9 @@ def to_sarif(result: ScanResult) -> dict:
             {
                 "ruleId": f.rule_id,
                 "level": _SARIF_LEVEL.get(f.severity, "warning"),
-                "message": {"text": f"{f.title} — {f.detail}"},
+                "message": {"text": f"{f.title} ({f.server}) — {f.detail}"},
                 "locations": [
-                    {"physicalLocation": {"artifactLocation": {"uri": f.location or "config"}}}
+                    {"physicalLocation": {"artifactLocation": {"uri": _artifact_uri(f.location)}}}
                 ],
             }
         )
@@ -42,7 +51,7 @@ def to_sarif(result: ScanResult) -> dict:
                 "tool": {
                     "driver": {
                         "name": "mcpvet",
-                        "informationUri": "https://github.com/your-org/mcpvet",  # update on launch
+                        "informationUri": _INFORMATION_URI,
                         "rules": list(rules.values()),
                     }
                 },
