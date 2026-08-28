@@ -6,6 +6,10 @@ from .models import ScanResult
 
 _SARIF_LEVEL = {"low": "note", "medium": "warning", "high": "error", "critical": "error"}
 _INFORMATION_URI = "https://github.com/markdoyle4312-hash/mcpvet"
+# GitHub's code-scanning ingestion requires security-severity to be a
+# stringified CVSS-like score, not the severity word — see
+# https://docs.github.com/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning#security-severity
+_SECURITY_SEVERITY = {"low": "2.5", "medium": "5.5", "high": "7.5", "critical": "9.5"}
 
 
 def to_json(result: ScanResult) -> str:
@@ -30,7 +34,10 @@ def to_sarif(result: ScanResult) -> dict:
                 "id": f.rule_id,
                 "name": f.title,
                 "shortDescription": {"text": f.title},
-                "properties": {"security-severity": f.severity, "owasp": f.owasp},
+                "properties": {
+                    "security-severity": _SECURITY_SEVERITY.get(f.severity, "5.5"),
+                    "owasp": f.owasp,
+                },
             },
         )
         sarif_results.append(
