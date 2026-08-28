@@ -35,7 +35,7 @@
       "Read(**/.env)"
     ]
   },
-  "enabledMcpjsonServers": ["context7", "github", "playwright", "postgres"],
+  "enabledMcpjsonServers": ["context7", "github", "playwright"],
   "hooks": {
     "PostToolUse": [
       {

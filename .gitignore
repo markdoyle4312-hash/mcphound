@@ -14,3 +14,5 @@ scan-results/
 sandbox/work/
 .DS_Store
 node_modules/
+.claude/settings.json
+
