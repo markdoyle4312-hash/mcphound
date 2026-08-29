@@ -19,6 +19,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -133,3 +134,20 @@ class Finding(Base):
     recommendation: Mapped[str | None] = mapped_column(Text)
 
     scan: Mapped[Scan] = relationship(back_populates="findings")
+
+
+class ServerScore(Base):
+    """One row per scoring run — append-only, mirrors the `hashes` ledger
+    style, so a server's score history is queryable without recomputing it."""
+
+    __tablename__ = "server_scores"
+    __table_args__ = (Index("ix_server_scores_server_computed", "server_id", "computed_at"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    server_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("servers.id"), nullable=False)
+    computed_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    finding_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    mcphound_version: Mapped[str] = mapped_column(String, nullable=False)

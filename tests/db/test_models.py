@@ -1,9 +1,9 @@
-from mcphound.db.models import Base, Finding, Hash, Scan, Server, Version
+from mcphound.db.models import Base, Finding, Hash, Scan, Server, ServerScore, Version
 
 
-def test_all_five_tables_are_registered():
+def test_all_six_tables_are_registered():
     table_names = set(Base.metadata.tables.keys())
-    assert table_names == {"servers", "versions", "hashes", "scans", "findings"}
+    assert table_names == {"servers", "versions", "hashes", "scans", "findings", "server_scores"}
 
 
 def test_versions_natural_key_constraint_columns():
@@ -27,3 +27,4 @@ def test_model_classes_map_to_expected_tables():
     assert Hash.__tablename__ == "hashes"
     assert Scan.__tablename__ == "scans"
     assert Finding.__tablename__ == "findings"
+    assert ServerScore.__tablename__ == "server_scores"
