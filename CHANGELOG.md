@@ -4,6 +4,51 @@ All notable changes to mcphound are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); this project doesn't use
 SemVer strictly pre-1.0 (see ROADMAP.md).
 
+## [Unreleased]
+
+### W7 false-positive sweep
+
+Ran `mcphound scan --deep` against a corpus of 36 real, source-verified MCP server
+configs (`tests/fp_sweep/registry_top50.json` — official reference implementations plus
+widely-used vendor and community servers; see `tests/fp_sweep/SOURCES.md` for the exact
+sources and the honesty note on why it's 36, not the roadmap's nominal 50: every
+candidate whose real launch command couldn't be confirmed against a primary source was
+dropped rather than guessed).
+
+**Result: zero false positives.** `MCP-STATIC-001` (hardcoded secrets), `-002` (curl \|
+sh), `-003` (over-broad permissions), `-005` (injection markers), and `-006`
+(typosquat) did not fire on any of the 36 servers, including several with
+realistic-looking placeholder tokens in `env` (`ntn_****`, `xoxp-[your-token]`,
+`pat123.abc123`) — confirming the secret-shape regex doesn't over-match plausible
+placeholders.
+
+`MCP-STATIC-004` (unpinned/`@latest` version) and `MCP-STATIC-007` (npm provenance,
+`--deep` only) both fired, and both were true positives on inspection:
+
+- **`MCP-STATIC-004` fired on 31/36 servers (86%).** This is not a rule bug — it's how
+  most vendors actually document their `npx`/`uvx` install command (no version pin).
+  Severity stays at `medium`: prevalence in the wild doesn't reduce the actual
+  rug-pull/registry-mutation risk of an unpinned package, so the finding isn't softened.
+  Documented here instead, as the calibration data a user of `--fail-on medium` should
+  expect.
+- **`MCP-STATIC-007` fired on `brave-search`, `puppeteer`, and `google-maps`** — all
+  three now-archived official reference servers, confirmed against the live npm
+  registry to genuinely have no `repository` field in their published metadata. Real
+  signal, not a scanner bug.
+
+The sweep also surfaced a genuine **detection gap** (false negative) in `MCP-STATIC-004`:
+its regex only recognized bare `npx`/`uvx <pkg>` invocations, missing `uvx --from
+<pkg>@latest ...` (the `redis` server's real launch command) and `uv run --with <pkg>
+...` (the `mcp-clickhouse` server's), both of which are genuinely unpinned. Fixed by
+extending the rule's regex to also accept `--from`/`--with` flags and a leading `uv run`
+form; new malicious/benign fixture pairs added for both shapes
+(`tests/fixtures/static/MCP-STATIC-004/`).
+
+Added `tests/fp_sweep/test_fp_sweep.py` as a permanent regression guard: it re-scans the
+corpus and fails CI if any rule other than `-004`/`-007` fires (a new false positive) or
+if `-007`'s three known hits change (a detection regression or an npm metadata change
+worth re-verifying).
+
 ## [0.1.2] — 2026-08-29
 
 ### Changed

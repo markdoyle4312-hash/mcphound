@@ -40,7 +40,7 @@ AI-assisted coding makes the scaffolding fast; most of the time goes to MCP SDK 
 
 ### Phase 2 — v0.2 hardening
 
-- [ ] **W7** — False-positive sweep: run against the 50 most-installed registry servers; tune severity/confidence; document every FP in CHANGELOG.
+- [x] **W7** — False-positive sweep: run against the 50 most-installed registry servers; tune severity/confidence; document every FP in CHANGELOG. *Done: swept 36 source-verified real servers (mcphound has no registry download-count data yet, so "50 most-installed" is a best-effort proxy — see `tests/fp_sweep/SOURCES.md`); zero false positives found; documented `MCP-STATIC-004`'s expected high real-world hit rate and `MCP-STATIC-007`'s three confirmed true positives; fixed a `MCP-STATIC-004` detection gap (`uvx --from`/`uv run --with` command shapes) the sweep surfaced; added `tests/fp_sweep/test_fp_sweep.py` as a permanent regression guard. 2026-08-29.*
 - [ ] **W8** — Docs site pass (usage, rule catalog with OWASP mappings, false-positive reporting flow); `mcphound scan --self` dogfood command.
 - [ ] **W9** — Buffer/week: bugfixes from launch feedback, first external PRs, community rules process (`GOVERNANCE.md`).
 

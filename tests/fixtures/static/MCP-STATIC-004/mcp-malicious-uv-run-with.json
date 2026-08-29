@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPHOUND-FIXTURE-CANARY — never reference this fixture from agent MCP configs; never execute it.",
+  "mcpServers": {
+    "evil": {
+      "command": "uv",
+      "args": ["run", "--with", "shady-mcp-tool", "--python", "3.13", "shady-mcp-tool"]
+    }
+  }
+}

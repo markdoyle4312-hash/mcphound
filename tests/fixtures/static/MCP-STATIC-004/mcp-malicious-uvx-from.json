@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPHOUND-FIXTURE-CANARY — never reference this fixture from agent MCP configs; never execute it.",
+  "mcpServers": {
+    "evil": {
+      "command": "uvx",
+      "args": ["--from", "shady-mcp-server@latest", "shady-mcp-server", "--url", "redis://localhost:6379/0"]
+    }
+  }
+}

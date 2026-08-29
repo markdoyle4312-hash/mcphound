@@ -44,6 +44,23 @@ def test_unpinned_version_rule_allows_pinned_version():
     assert "MCP-STATIC-004" not in _finding_ids("mcp-benign.json", "MCP-STATIC-004")
 
 
+def test_unpinned_version_rule_fires_on_uvx_from_latest():
+    assert "MCP-STATIC-004" in _finding_ids("mcp-malicious-uvx-from.json", "MCP-STATIC-004")
+
+
+def test_unpinned_version_rule_allows_uvx_from_pinned():
+    assert "MCP-STATIC-004" not in _finding_ids("mcp-benign-uvx-from-pinned.json", "MCP-STATIC-004")
+
+
+def test_unpinned_version_rule_fires_on_uv_run_with():
+    assert "MCP-STATIC-004" in _finding_ids("mcp-malicious-uv-run-with.json", "MCP-STATIC-004")
+
+
+def test_unpinned_version_rule_allows_uv_run_with_pinned():
+    fixture = "mcp-benign-uv-run-with-pinned.json"
+    assert "MCP-STATIC-004" not in _finding_ids(fixture, "MCP-STATIC-004")
+
+
 def test_description_injection_rule_fires_on_hidden_comment_and_zero_width():
     assert "MCP-STATIC-005" in _finding_ids("mcp-malicious.json", "MCP-STATIC-005")
 

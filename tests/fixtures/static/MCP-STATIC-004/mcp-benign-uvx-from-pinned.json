@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPHOUND-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "uvx",
+      "args": ["--from", "redis-mcp-server@1.4.0", "redis-mcp-server", "--url", "redis://localhost:6379/0"]
+    }
+  }
+}
