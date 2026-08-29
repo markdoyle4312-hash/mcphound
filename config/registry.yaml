@@ -1,3 +1,4 @@
 registry:
   base_url: https://registry.modelcontextprotocol.io
   page_limit: 100
+  artifacts_dir: artifacts

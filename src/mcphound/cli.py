@@ -14,8 +14,10 @@ from .db.session import get_session_factory
 from .discovery.clients import discover_configs, load_servers
 from .models import SEVERITY_ORDER, ScanResult
 from .output import to_json, to_sarif
+from .registry.artifacts import write_artifacts
 from .registry.config import load_config
 from .registry.poller import run_poll
+from .registry.scanner import run_scan, run_scoring
 from .rules.engine import evaluate
 from .rules.loader import load_rules
 
@@ -140,8 +142,10 @@ def scan(
     else:
         typer.echo(text)
 
-    severity_exceeded = fail_on and fail_on in SEVERITY_ORDER and any(
-        SEVERITY_ORDER[f.severity] >= SEVERITY_ORDER[fail_on] for f in result.findings
+    severity_exceeded = (
+        fail_on
+        and fail_on in SEVERITY_ORDER
+        and any(SEVERITY_ORDER[f.severity] >= SEVERITY_ORDER[fail_on] for f in result.findings)
     )
     if missing or severity_exceeded:
         raise typer.Exit(1)
@@ -200,9 +204,7 @@ def registry_poll(
     ] = Path("config/registry.yaml"),
     dry_run: Annotated[
         bool,
-        typer.Option(
-            "--dry-run", help="Run the full pipeline but roll back instead of committing"
-        ),
+        typer.Option("--dry-run", help="Run the full pipeline but roll back instead of committing"),
     ] = False,
 ):
     """Poll the official MCP Registry and upsert servers/versions/hashes into Postgres."""
@@ -216,6 +218,49 @@ def registry_poll(
         else:
             session.commit()
             typer.echo(summary.format())
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@app.command(name="registry-scan")
+def registry_scan(
+    config_path: Annotated[
+        Path, typer.Option("--config", help="Path to registry poll config YAML")
+    ] = Path("config/registry.yaml"),
+    out: Annotated[
+        Path | None,
+        typer.Option(
+            "--out",
+            help="Directory for per-server JSON + index.json (default: config's artifacts_dir)",
+        ),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Run the full pipeline but roll back instead of committing"),
+    ] = False,
+):
+    """Batch-scan every currently-listed registry server, score it 0-100, and
+    write JSON artifacts. Run after `registry-poll` has populated the DB."""
+    cfg = load_config(config_path)
+    rules = load_rules()
+    out_dir = out or Path(cfg.artifacts_dir)
+    session = get_session_factory()()
+    try:
+        scan_summary = run_scan(session, rules, __version__)
+        score_summary = run_scoring(session, __version__)
+        if dry_run:
+            session.rollback()
+            typer.echo(f"[dry-run, rolled back] {scan_summary.format()}; {score_summary.format()}")
+        else:
+            session.commit()
+            written = write_artifacts(session, out_dir)
+            typer.echo(
+                f"{scan_summary.format()}; {score_summary.format()}; "
+                f"wrote artifacts for {written} server(s) to {out_dir}"
+            )
     except Exception:
         session.rollback()
         raise

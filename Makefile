@@ -1,4 +1,4 @@
-.PHONY: install test lint format scan-self fixtures docs docs-check db-up db-migrate registry-poll
+.PHONY: install test lint format scan-self fixtures docs docs-check db-up db-migrate registry-poll registry-scan
 
 install:
 	uv sync --extra dev
@@ -37,3 +37,6 @@ db-migrate:
 
 registry-poll:
 	uv run mcphound registry-poll --config config/registry.yaml
+
+registry-scan:
+	uv run mcphound registry-scan --config config/registry.yaml

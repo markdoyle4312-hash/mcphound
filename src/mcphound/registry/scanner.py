@@ -148,9 +148,7 @@ def _latest_ok_scan_findings(session: Session, version_id: int) -> list[FindingR
     )
     if scan is None:
         return []
-    return list(
-        session.execute(select(FindingRow).where(FindingRow.scan_id == scan.id)).scalars()
-    )
+    return list(session.execute(select(FindingRow).where(FindingRow.scan_id == scan.id)).scalars())
 
 
 def run_scoring(session: Session, mcphound_version: str) -> ScoringSummary:
@@ -160,13 +158,17 @@ def run_scoring(session: Session, mcphound_version: str) -> ScoringSummary:
     (e.g. after tuning scoring.SEVERITY_WEIGHT) without rescanning."""
     summary = ScoringSummary()
     for server_id in _in_scope_server_ids(session):
-        version_ids = session.execute(
-            select(Version.id).where(
-                Version.server_id == server_id,
-                Version.is_latest.is_(True),
-                Version.delisted_at.is_(None),
+        version_ids = (
+            session.execute(
+                select(Version.id).where(
+                    Version.server_id == server_id,
+                    Version.is_latest.is_(True),
+                    Version.delisted_at.is_(None),
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         findings: list[FindingRow] = []
         for version_id in version_ids:
             findings.extend(_latest_ok_scan_findings(session, version_id))

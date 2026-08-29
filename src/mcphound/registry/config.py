@@ -10,12 +10,14 @@ import yaml
 
 DEFAULT_BASE_URL = "https://registry.modelcontextprotocol.io"
 DEFAULT_PAGE_LIMIT = 100
+DEFAULT_ARTIFACTS_DIR = "artifacts"
 
 
 @dataclass
 class RegistryPollConfig:
     base_url: str
     page_limit: int
+    artifacts_dir: str
 
 
 def load_config(path: Path) -> RegistryPollConfig:
@@ -24,4 +26,5 @@ def load_config(path: Path) -> RegistryPollConfig:
     return RegistryPollConfig(
         base_url=registry.get("base_url", DEFAULT_BASE_URL),
         page_limit=int(registry.get("page_limit", DEFAULT_PAGE_LIMIT)),
+        artifacts_dir=registry.get("artifacts_dir", DEFAULT_ARTIFACTS_DIR),
     )

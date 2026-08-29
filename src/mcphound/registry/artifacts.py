@@ -42,13 +42,17 @@ def _latest_score(session: Session, server_id: int) -> ServerScore | None:
 
 
 def _findings_for_server(session: Session, server_id: int) -> list[dict]:
-    version_ids = session.execute(
-        select(Version.id).where(
-            Version.server_id == server_id,
-            Version.is_latest.is_(True),
-            Version.delisted_at.is_(None),
+    version_ids = (
+        session.execute(
+            select(Version.id).where(
+                Version.server_id == server_id,
+                Version.is_latest.is_(True),
+                Version.delisted_at.is_(None),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     findings: list[dict] = []
     for version_id in version_ids:
         scan = (
@@ -63,9 +67,7 @@ def _findings_for_server(session: Session, server_id: int) -> list[dict]:
         )
         if scan is None:
             continue
-        rows = session.execute(
-            select(FindingRow).where(FindingRow.scan_id == scan.id)
-        ).scalars()
+        rows = session.execute(select(FindingRow).where(FindingRow.scan_id == scan.id)).scalars()
         findings.extend(
             {
                 "rule_id": row.rule_id,

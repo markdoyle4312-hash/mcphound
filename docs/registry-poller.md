@@ -42,9 +42,43 @@ it locally or on a machine you control.
   a `.ps1` script that sets `$env:MCPHOUND_DATABASE_URL` first and point the
   task at that script.
 
+## Scanning: `mcphound registry-scan`
+
+Once the poller has populated `servers`/`versions`/`hashes`, `registry-scan`
+batch-runs the existing static rule engine against every currently-listed
+("latest", not delisted) version, writes `scans`/`findings` rows, computes a
+0-100 score per server into `server_scores`, and writes JSON artifacts for
+the future static site generator:
+
+```bash
+uv run mcphound registry-scan --config config/registry.yaml
+# or: make registry-scan
+```
+
+It's incremental: a version is skipped if it already has a scan from the
+current mcphound version and no newer hash has been observed since — so a
+nightly cron just chains the two commands:
+
+```
+registry-poll && registry-scan
+```
+
+`--dry-run` runs the full pipeline but rolls back instead of committing, and
+skips writing artifacts (there's nothing committed to publish). `--out`
+overrides the output directory (default: `artifacts_dir` in
+`config/registry.yaml`, itself defaulting to `./artifacts`) — writes
+`artifacts/servers/<name>.json` per server plus `artifacts/index.json` as a
+leaderboard summary.
+
+Network-dependent rules (currently just the npm provenance check,
+`MCP-STATIC-007`) always run here, unlike the local `scan` command's
+`--deep` gate — a nightly batch job has no latency pressure, and provenance
+checking against the public registry is exactly what this pipeline exists
+to produce.
+
 ## Schema
 
-Five tables (`src/mcphound/db/models.py`), all timestamps `timestamptz`, every
+Six tables (`src/mcphound/db/models.py`), all timestamps `timestamptz`, every
 table with a surrogate bigserial `id` plus `created_at`/`updated_at` bookkeeping.
 
 **`servers`** — one row per registry entity, keyed on `name` (the registry's
@@ -75,11 +109,17 @@ signal. Nothing consumes that signal yet, but the data has to start
 accumulating now to be useful later. Indexed on `(version_id, observed_at)`
 for "latest hash for this version" reads.
 
-**`scans` / `findings`** — created now, populated by W12-13, not this poller.
-`scans` holds `version_id`, `scanned_at`, `mcphound_version`, `deep`, `status`;
-`findings` mirrors every field on `mcphound.models.Finding` (`rule_id`,
-`title`, `severity`, `confidence`, `owasp`, `phase`, `detail`,
-`recommendation`) so DB rows and CLI JSON output never diverge in shape.
+**`scans` / `findings`** — created here, populated by `registry-scan` (see
+above), not this poller. `scans` holds `version_id`, `scanned_at`,
+`mcphound_version`, `deep`, `status`; `findings` mirrors every field on
+`mcphound.models.Finding` (`rule_id`, `title`, `severity`, `confidence`,
+`owasp`, `phase`, `detail`, `recommendation`) so DB rows and CLI JSON output
+never diverge in shape.
+
+**`server_scores`** — one append-only row per scoring run
+(`server_id`, `computed_at`, `score`, `finding_count`, `mcphound_version`),
+mirroring the `hashes` ledger style so a server's score history is queryable
+without recomputing it. Populated by `registry-scan`'s scoring pass.
 
 **Delisting is soft, not a `DELETE`.** Each run stamps `last_seen_at` on
 everything it touches, then mark-and-sweeps: anything with `last_seen_at`
