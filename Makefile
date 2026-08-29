@@ -1,4 +1,4 @@
-.PHONY: install test lint format scan-self fixtures docs docs-check
+.PHONY: install test lint format scan-self fixtures docs docs-check db-up db-migrate registry-poll
 
 install:
 	uv sync --extra dev
@@ -27,3 +27,13 @@ docs:
 # CI guard: fail if docs/rules.md is stale relative to the rule YAML files
 docs-check: docs
 	git diff --exit-code docs/rules.md
+
+# Local Postgres for the registry poller (docker compose)
+db-up:
+	docker compose up -d db
+
+db-migrate:
+	uv run alembic upgrade head
+
+registry-poll:
+	uv run mcphound registry-poll --config config/registry.yaml

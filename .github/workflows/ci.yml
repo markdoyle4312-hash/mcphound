@@ -55,6 +55,35 @@ jobs:
           uv run python scripts/generate_rule_docs.py
           git diff --exit-code docs/rules.md
 
+  db-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mcphound
+          POSTGRES_PASSWORD: mcphound
+          POSTGRES_DB: mcphound_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mcphound"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MCPHOUND_DATABASE_URL: postgresql+psycopg://mcphound:mcphound@localhost:5432/mcphound_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --all-extras
+      - name: DB-backed tests (runs Alembic migrations via the test fixture)
+        run: uv run pytest tests/db tests/registry -q
+
   nightly-registry-scan:
     # Phase 2+ : start as a weekly cron, promote to nightly when the poller exists.
     if: ${{ false }}  # flip on after Phase 2 ships
