@@ -27,10 +27,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/markdoyle4312-hash/mcpvet"
-Repository = "https://github.com/markdoyle4312-hash/mcpvet"
-Issues = "https://github.com/markdoyle4312-hash/mcpvet/issues"
-Changelog = "https://github.com/markdoyle4312-hash/mcpvet/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/markdoyle4312-hash/mcphound"
+Repository = "https://github.com/markdoyle4312-hash/mcphound"
+Issues = "https://github.com/markdoyle4312-hash/mcphound/issues"
+Changelog = "https://github.com/markdoyle4312-hash/mcphound/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

@@ -5,7 +5,7 @@ from __future__ import annotations
 from .models import ScanResult
 
 _SARIF_LEVEL = {"low": "note", "medium": "warning", "high": "error", "critical": "error"}
-_INFORMATION_URI = "https://github.com/markdoyle4312-hash/mcpvet"
+_INFORMATION_URI = "https://github.com/markdoyle4312-hash/mcphound"
 # GitHub's code-scanning ingestion requires security-severity to be a
 # stringified CVSS-like score, not the severity word — see
 # https://docs.github.com/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-code-scanning#security-severity
