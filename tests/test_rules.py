@@ -129,3 +129,64 @@ def test_sarif_serializes():
     sarif = to_sarif(ScanResult(servers=servers, findings=findings))
     assert sarif["version"] == "2.1.0"
     assert sarif["runs"][0]["results"], "expected at least one SARIF result"
+
+
+def test_fetch_npm_metadata_retries_on_429_then_succeeds(monkeypatch):
+    import httpx
+
+    from mcphound.rules import engine
+
+    request = httpx.Request("GET", "https://registry.npmjs.org/some-pkg")
+    responses = [
+        httpx.Response(429, request=request),
+        httpx.Response(429, request=request),
+        httpx.Response(
+            200,
+            request=request,
+            json={"dist-tags": {"latest": "1.0.0"}, "versions": {"1.0.0": {}}},
+        ),
+    ]
+
+    def fake_get(url, timeout):
+        return responses.pop(0)
+
+    monkeypatch.setattr(engine.httpx, "get", fake_get)
+    monkeypatch.setattr(engine.time, "sleep", lambda seconds: None)
+
+    result = engine._fetch_npm_metadata("some-pkg")
+
+    assert result == {"dist-tags": {"latest": "1.0.0"}, "versions": {"1.0.0": {}}}
+    assert responses == []
+
+
+def test_fetch_npm_metadata_gives_up_after_max_retries(monkeypatch):
+    import httpx
+
+    from mcphound.rules import engine
+
+    request = httpx.Request("GET", "https://registry.npmjs.org/some-pkg")
+    monkeypatch.setattr(
+        engine.httpx, "get", lambda url, timeout: httpx.Response(429, request=request)
+    )
+    monkeypatch.setattr(engine.time, "sleep", lambda seconds: None)
+
+    assert engine._fetch_npm_metadata("some-pkg") is None
+
+
+def test_fetch_npm_metadata_does_not_retry_on_non_429_error(monkeypatch):
+    import httpx
+
+    from mcphound.rules import engine
+
+    request = httpx.Request("GET", "https://registry.npmjs.org/some-pkg")
+    calls = {"n": 0}
+
+    def fake_get(url, timeout):
+        calls["n"] += 1
+        return httpx.Response(500, request=request)
+
+    monkeypatch.setattr(engine.httpx, "get", fake_get)
+    monkeypatch.setattr(engine.time, "sleep", lambda seconds: None)
+
+    assert engine._fetch_npm_metadata("some-pkg") is None
+    assert calls["n"] == 1

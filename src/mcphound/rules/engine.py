@@ -31,6 +31,7 @@ from __future__ import annotations
 import functools
 import json
 import re
+import time
 from pathlib import Path
 
 import httpx
@@ -41,6 +42,8 @@ from ..models import Finding, ServerConfig
 
 _DATA_DIR = Path(__file__).parent / "data"
 _NPM_TIMEOUT = 5.0
+_NPM_MAX_RETRIES = 3
+_NPM_BACKOFF_SECONDS = 0.5
 
 
 def _target_text(server: ServerConfig, target: str) -> str:
@@ -131,13 +134,23 @@ def _evaluate_typosquat(server: ServerConfig, rule: dict, detect: dict) -> list[
 
 
 def _fetch_npm_metadata(pkg: str) -> dict | None:
-    """Isolated so tests can monkeypatch it instead of hitting the real registry."""
-    try:
-        resp = httpx.get(f"https://registry.npmjs.org/{pkg}", timeout=_NPM_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.HTTPError:
-        return None
+    """Isolated so tests can monkeypatch it instead of hitting the real registry.
+    Retries a bounded number of times on HTTP 429 (rate limit) before falling
+    back to the existing fail-open behavior — never let a provenance check
+    fail closed against an offline/rate-limited registry."""
+    for attempt in range(_NPM_MAX_RETRIES):
+        try:
+            resp = httpx.get(f"https://registry.npmjs.org/{pkg}", timeout=_NPM_TIMEOUT)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            is_last_attempt = attempt == _NPM_MAX_RETRIES - 1
+            if exc.response.status_code != 429 or is_last_attempt:
+                return None
+            time.sleep(_NPM_BACKOFF_SECONDS * (attempt + 1))
+        except httpx.HTTPError:
+            return None
+    return None
 
 
 def _evaluate_npm_provenance(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
