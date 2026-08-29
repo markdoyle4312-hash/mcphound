@@ -4,7 +4,7 @@ All notable changes to mcphound are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); this project doesn't use
 SemVer strictly pre-1.0 (see ROADMAP.md).
 
-## [Unreleased]
+## [0.1.1] — 2026-08-29
 
 ### Fixed
 - `scan`/`inspect` silently ignored an explicitly-passed config file that
