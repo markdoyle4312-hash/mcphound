@@ -53,6 +53,12 @@ Prints a pre-filled GitHub issue URL — no network call, no auth. Redact secret
 from any config snippet before pasting it into the issue. See
 [GOVERNANCE.md](GOVERNANCE.md#false-positives) for the full policy.
 
+## Registry poller (local, opt-in)
+
+Ingests the official MCP Registry into a local Postgres database for future
+reputation-scoring work. Not needed to use `mcphound scan`/`inspect`/`feedback`
+— see [docs/registry-poller.md](docs/registry-poller.md) for setup.
+
 ## Development
 
 ```bash

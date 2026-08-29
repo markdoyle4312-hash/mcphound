@@ -6,6 +6,28 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### W10-11 registry poller + Postgres schema
+
+New `mcphound registry-poll --config config/registry.yaml [--dry-run]` command
+ingests the official MCP Registry (`registry.modelcontextprotocol.io`) into a
+local Postgres database. The API has no delta/webhook mechanism, so every run
+pages the entire registry and upserts by natural key (idempotent — safe to run
+repeatedly or interrupt). Servers/versions no longer present in a run are
+soft-delisted (`delisted_at`, reversible), never hard-deleted — a taken-down
+malicious server's history is exactly what mcphound's mission wants kept. A
+new `hashes` table is an append-only ledger (only a new row when a version's
+sha256 actually changes) — the foundation the v1.5 "description-hash drift
+alerts" roadmap item needs. `scans`/`findings` tables are created but stay
+empty until W12-13's batch scanning pipeline populates them.
+
+New: SQLAlchemy 2.0 + Alembic under `src/mcphound/db/` (new optional
+`registry` extra — kept out of the core install so `pip install mcphound`
+stays lightweight for scanner-only use), `docker-compose.yml` for local
+Postgres, a `db-tests` CI job running against a real Postgres service
+container (not mocks — see `docs/superpowers/specs/2026-08-29-registry-poller-design.md`).
+See `docs/registry-poller.md` for local setup and nightly-scheduling docs
+(cron/Task Scheduler — no custom scheduling logic was built).
+
 ### W9 community rules process
 
 GOVERNANCE.md's "Contributing rules" section was three bullet points marked

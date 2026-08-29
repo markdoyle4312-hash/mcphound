@@ -46,7 +46,7 @@ AI-assisted coding makes the scaffolding fast; most of the time goes to MCP SDK 
 
 ### Phase 3 — v1.0-beta reputation site + API
 
-- [ ] **W10–11** — Registry poller: ingest official MCP Registry API nightly + dedupe; Postgres schema (servers, versions, scans, findings, hashes). *Done: cron job populates DB locally.*
+- [x] **W10–11** — Registry poller: ingest official MCP Registry API nightly + dedupe; Postgres schema (servers, versions, scans, findings, hashes). *Done: cron job populates DB locally.* `mcphound registry-poll --config config/registry.yaml` pages the real registry (confirmed live at registry.modelcontextprotocol.io, no delta API — full re-page every run) and upserts by natural key; soft-delist via `delisted_at` for anything no longer present. `hashes` is an append-only drift-detection ledger, not a 1:1 mirror of the registry's own hash. `scans`/`findings` tables exist, populated by W12-13. SQLAlchemy 2.0 + Alembic + docker-compose Postgres for local dev; `db-tests` CI job runs against a real Postgres service container. See `docs/registry-poller.md` and the design spec for the full reasoning. 2026-08-29.*
 - [ ] **W12–13** — Batch static scanning pipeline over all ingested servers; scoring engine (weighted 0–100, OWASP-coded findings). *Done: full registry scanned to JSON artifacts.*
 - [ ] **W14** — **Static site generator** (not a web app): per-server score pages from nightly snapshots, leaderboard, typosquat cluster pages. Deploy cheap (Vercel/Cloudflare Pages). *Done: pages live for all scanned servers.*
 - [ ] **W15** — FastAPI read-only API (`/v1/servers/{id}`, `/v1/check?name=`), rate-limited, free tier; embeddable badge for server authors.
