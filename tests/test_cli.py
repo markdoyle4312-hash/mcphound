@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from typer.testing import CliRunner
 
@@ -143,3 +144,49 @@ def test_feedback_errors_on_unknown_rule_id():
     result = runner.invoke(app, ["feedback", "MCP-STATIC-999"])
     assert result.exit_code != 0
     assert "unknown rule id" in result.output
+
+
+def test_registry_poll_dry_run_rolls_back(monkeypatch, tmp_path):
+    from mcphound import cli as cli_module
+
+    cfg_path = tmp_path / "registry.yaml"
+    cfg_path.write_text(
+        "registry:\n  base_url: https://registry.example\n  page_limit: 5\n", encoding="utf-8"
+    )
+
+    fake_session = MagicMock()
+    fake_summary = MagicMock()
+    fake_summary.format.return_value = "servers: 0 seen"
+
+    monkeypatch.setattr(cli_module, "get_session_factory", lambda: (lambda: fake_session))
+    monkeypatch.setattr(cli_module, "run_poll", lambda session, base_url, page_limit: fake_summary)
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["registry-poll", "--config", str(cfg_path), "--dry-run"])
+
+    assert result.exit_code == 0
+    fake_session.rollback.assert_called_once()
+    fake_session.commit.assert_not_called()
+    assert "dry-run" in result.stdout
+
+
+def test_registry_poll_commits_by_default(monkeypatch, tmp_path):
+    from mcphound import cli as cli_module
+
+    cfg_path = tmp_path / "registry.yaml"
+    cfg_path.write_text("registry:\n  base_url: https://registry.example\n", encoding="utf-8")
+
+    fake_session = MagicMock()
+    fake_summary = MagicMock()
+    fake_summary.format.return_value = "servers: 1 seen"
+
+    monkeypatch.setattr(cli_module, "get_session_factory", lambda: (lambda: fake_session))
+    monkeypatch.setattr(cli_module, "run_poll", lambda session, base_url, page_limit: fake_summary)
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["registry-poll", "--config", str(cfg_path)])
+
+    assert result.exit_code == 0
+    fake_session.commit.assert_called_once()
+    fake_session.rollback.assert_not_called()
+    assert "servers: 1 seen" in result.stdout

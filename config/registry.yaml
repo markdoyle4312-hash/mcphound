@@ -1,0 +1,3 @@
+registry:
+  base_url: https://registry.modelcontextprotocol.io
+  page_limit: 100

@@ -10,9 +10,12 @@ from urllib.parse import quote
 import typer
 
 from . import __version__
+from .db.session import get_session_factory
 from .discovery.clients import discover_configs, load_servers
 from .models import SEVERITY_ORDER, ScanResult
 from .output import to_json, to_sarif
+from .registry.config import load_config
+from .registry.poller import run_poll
 from .rules.engine import evaluate
 from .rules.loader import load_rules
 
@@ -188,6 +191,36 @@ def feedback(
         f"?title={quote(title)}&labels={quote('false-positive')}&body={quote(body)}"
     )
     typer.echo(f"Report a false positive for {rule_id}:\n\n{url}")
+
+
+@app.command(name="registry-poll")
+def registry_poll(
+    config_path: Annotated[
+        Path, typer.Option("--config", help="Path to registry poll config YAML")
+    ] = Path("config/registry.yaml"),
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Run the full pipeline but roll back instead of committing"
+        ),
+    ] = False,
+):
+    """Poll the official MCP Registry and upsert servers/versions/hashes into Postgres."""
+    cfg = load_config(config_path)
+    session = get_session_factory()()
+    try:
+        summary = run_poll(session, cfg.base_url, cfg.page_limit)
+        if dry_run:
+            session.rollback()
+            typer.echo(f"[dry-run, rolled back] {summary.format()}")
+        else:
+            session.commit()
+            typer.echo(summary.format())
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":
