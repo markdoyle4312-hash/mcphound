@@ -1,16 +1,16 @@
 ---
 name: rule-authoring
-description: Use when adding a new detection rule to mcpvet (static or dynamic). Covers the YAML rule schema, fixtures, OWASP mapping, and tests.
+description: Use when adding a new detection rule to mcphound (static or dynamic). Covers the YAML rule schema, fixtures, OWASP mapping, and tests.
 ---
 
-# Authoring a new mcpvet detection rule
+# Authoring a new mcphound detection rule
 
 Every rule MUST land with four artifacts: YAML rule, malicious fixture, benign fixture, pytest.
 
-## 1. Rule file: `src/mcpvet/rules/<id>.yaml`
+## 1. Rule file: `src/mcphound/rules/<id>.yaml`
 
 ```yaml
-id: MCP-STATIC-0xx        # next unused number — check src/mcpvet/rules/ before picking one
+id: MCP-STATIC-0xx        # next unused number — check src/mcphound/rules/ before picking one
 title: Dangerous install command (curl pipe shell)
 owasp: LLM01            # LLMxx = OWASP LLM Top10, ASTxx = OWASP Agentic Top10
 phase: static           # static | dynamic
@@ -35,7 +35,7 @@ exception exists: **typosquat checks need edit-distance, not a regex**, so they 
 detect:
   type: typosquat
   target: command                        # only "command" is supported today
-  reference_list: known_servers.yaml     # YAML list under src/mcpvet/rules/data/
+  reference_list: known_servers.yaml     # YAML list under src/mcphound/rules/data/
   max_distance: 2                        # flag names within N edits of a reference name,
                                           # but not an exact match (exact = it IS that package)
 ```
@@ -60,7 +60,7 @@ Don't add a fourth `detect.type` casually — every new type is engine code, not
 YAML rule. Prefer extending the regex path unless the check is genuinely not regex-expressible.
 
 ## 2. Fixtures
-- Malicious: `tests/fixtures/static/<id>/mcp-malicious.json` — contains the triggering pattern AND the canary string `MCPVET-FIXTURE-CANARY` somewhere in the file.
+- Malicious: `tests/fixtures/static/<id>/mcp-malicious.json` — contains the triggering pattern AND the canary string `MCPHOUND-FIXTURE-CANARY` somewhere in the file.
 - Benign: `tests/fixtures/static/<id>/mcp-benign.json` — the closest legitimate config (false-positive guard). For install-command rules, a pinned `npx -y pkg@1.2.3`.
 
 ## 3. Test: add cases to `tests/test_rules.py`
@@ -71,8 +71,8 @@ YAML rule. Prefer extending the regex path unless the check is genuinely not reg
 
 ## 4. Before you commit
 - `uv run pytest tests/test_rules.py -q` passes.
-- Run `uv run mcpvet scan tests/fixtures/static/<id>/mcp-malicious.json --json` and eyeball the output.
-- No separate rule index to update — `rules/loader.py` globs every `*.yaml` in `src/mcpvet/rules/` automatically.
+- Run `uv run mcphound scan tests/fixtures/static/<id>/mcp-malicious.json --json` and eyeball the output.
+- No separate rule index to update — `rules/loader.py` globs every `*.yaml` in `src/mcphound/rules/` automatically.
 - Never run the malicious fixture's server — static rules never execute anything. Dynamic rules only execute inside the Docker sandbox runner.
 
 ## Rule numbering convention

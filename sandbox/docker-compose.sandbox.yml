@@ -4,7 +4,7 @@
 #  - ALL egress routed through the logging proxy (nothing reaches the internet unseen)
 #  - disposable: the target container is destroyed after every scan
 #
-# Wire-up (not yet implemented): mcpvet runs an MCP handshake + scripted tool walk
+# Wire-up (not yet implemented): mcphound runs an MCP handshake + scripted tool walk
 # inside `target`, while `egress-proxy` records every outbound connection for the
 # "undeclared egress" finding (MCP-DYNAMIC rules).
 services:
@@ -20,13 +20,13 @@ services:
 
   target:
     # Built per-scan from the server under test. Never mount the repo.
-    image: mcpvet-sandbox-target:latest
+    image: mcphound-sandbox-target:latest
     network_mode: "service:egress-proxy"
     environment:
       HTTP_PROXY: "http://127.0.0.1:8080"
       HTTPS_PROXY: "http://127.0.0.1:8080"
       # dummy values only — real credentials NEVER enter the sandbox
-      OPENAI_API_KEY: "mcpvet-sandbox-dummy"
+      OPENAI_API_KEY: "mcphound-sandbox-dummy"
     tmpfs:
       - /tmp
     networks:

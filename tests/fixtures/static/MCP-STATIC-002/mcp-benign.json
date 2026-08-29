@@ -1,5 +1,5 @@
 {
-  "_canary": "MCPVET-FIXTURE-CANARY",
+  "_canary": "MCPHOUND-FIXTURE-CANARY",
   "mcpServers": {
     "good": {
       "command": "npx",

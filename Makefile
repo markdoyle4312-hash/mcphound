@@ -18,5 +18,5 @@ scan-self:
 		bash scripts/self-scan.sh
 
 fixtures:
-	@echo "Fixtures must contain MCPVET-FIXTURE-CANARY and must never be"
+	@echo "Fixtures must contain MCPHOUND-FIXTURE-CANARY and must never be"
 	@echo "referenced from .mcp.json / opencode.jsonc / any agent config."

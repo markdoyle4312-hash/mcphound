@@ -50,7 +50,7 @@
       "uvx *": "ask",
       "uv run pytest*": "allow",
       "uv run ruff*": "allow",
-      "uv run mcpvet*": "allow",
+      "uv run mcphound*": "allow",
       "docker build*": "allow",
       "docker compose*": "allow",
       "*": "ask"
@@ -76,9 +76,9 @@
     },
     // Adversarial test author for the detection rules.
     "redteam": {
-      "description": "Crafts evasive poisoned-MCP fixtures to attack mcpvet's detectors. Sandbox-only.",
+      "description": "Crafts evasive poisoned-MCP fixtures to attack mcphound's detectors. Sandbox-only.",
       "mode": "subagent",
-      "prompt": "Read CLAUDE.md SAFETY RULES. Every fixture must contain MCPVET-FIXTURE-CANARY, never execute fixtures on the host (Docker sandbox only), never use real external endpoints.",
+      "prompt": "Read CLAUDE.md SAFETY RULES. Every fixture must contain MCPHOUND-FIXTURE-CANARY, never execute fixtures on the host (Docker sandbox only), never use real external endpoints.",
       "tools": {
         "read": true, "grep": true, "glob": true, "write": true, "edit": true,
         "bash": true

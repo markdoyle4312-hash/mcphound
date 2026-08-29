@@ -41,7 +41,6 @@ dev = [
 
 [project.scripts]
 mcphound = "mcphound.cli:app"
-mcpvet = "mcphound.cli:app"  # back-compat alias from the pre-rename mcpvet/mcp-vet names
 
 [build-system]
 requires = ["hatchling"]

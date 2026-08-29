@@ -1,4 +1,4 @@
-# mcpvet — v1 Timeline & Roadmap
+# mcphound — v1 Timeline & Roadmap
 
 *Effort assumption: ~5 hrs/week (20–25 hrs/month) alongside the services business. Times are calendar weeks, including ~1 dead week per month for services/busy periods.*
 
@@ -39,16 +39,16 @@ That's the minimum that earns press citations, team-tier waitlists, and the laun
 ### Phase 1 — v0.1 public CLI (Weeks 1–6)
 
 - [x] **W1** — Repo init: copy scaffold, `pyproject.toml` (uv, typer, mcp SDK, pydantic, pytest, ruff), CLAUDE.md in place, CI green on empty tests. *Done: `uv run pytest` passes with 1 trivial test; repo public.*
-- [x] **W2** — Config discovery: parsers for Claude Desktop/Code, Cursor, Windsurf, Gemini CLI paths; `inspect` command lists servers without executing. *Done: `mcpvet inspect` lists servers on your own machine; tests with sample configs.*
+- [x] **W2** — Config discovery: parsers for Claude Desktop/Code, Cursor, Windsurf, Gemini CLI paths; `inspect` command lists servers without executing. *Done: `mcphound inspect` lists servers on your own machine; tests with sample configs.*
 - [x] **W3** — Rule engine v1: YAML rule loader, findings dataclass, JSON output; first 4 static rules (hardcoded secrets in config, dangerous launch commands/curl-pipe-shell, over-broad filesystem/shell permissions, pinned-version check). *Done: each rule has the 4 artifacts (YAML + malicious fixture + benign fixture + test) per the `rule-authoring` skill.*
-- [x] **W4** — Tool-description injection markers (`MCP-STATIC-005`: hidden HTML comments, zero-width chars, exfiltration-imperative phrasing), typosquat distance vs a bundled name list (`MCP-STATIC-006`, Levenshtein via rapidfuzz), package provenance (`MCP-STATIC-007`, npm-only, scoped to a missing `repository` field). *Done: 7 rules passing, not the originally-targeted 8 — provenance covers 1 of the 3 sub-checks named above; postinstall-script inspection and registry-age checks are still open. Provenance is network-dependent, so it's marked `network: true` and gated behind `mcpvet scan --deep`, off by default, per GOVERNANCE.md's separability rule. `--json` stays deterministic without `--deep`.*
-- [ ] **W5** — SARIF output + `--fail-on` exit codes + README with install/quickstart: **done**, plus an `-o/--output` flag added so the README's documented command actually works. Publish to PyPI; tag v0.1: **not done** — `uv build` verified clean, but `git tag v0.1.0`, `git push --tags`, and `uv publish` are intentionally left for a human to run, per CLAUDE.md's publish-approval rule. *Done: `uvx mcpvet@0.1.0 scan <config>` works on a stranger's machine — blocked only on the tag/publish step above.*
+- [x] **W4** — Tool-description injection markers (`MCP-STATIC-005`: hidden HTML comments, zero-width chars, exfiltration-imperative phrasing), typosquat distance vs a bundled name list (`MCP-STATIC-006`, Levenshtein via rapidfuzz), package provenance (`MCP-STATIC-007`, npm-only, scoped to a missing `repository` field). *Done: 7 rules passing, not the originally-targeted 8 — provenance covers 1 of the 3 sub-checks named above; postinstall-script inspection and registry-age checks are still open. Provenance is network-dependent, so it's marked `network: true` and gated behind `mcphound scan --deep`, off by default, per GOVERNANCE.md's separability rule. `--json` stays deterministic without `--deep`.*
+- [ ] **W5** — SARIF output + `--fail-on` exit codes + README with install/quickstart: **done**, plus an `-o/--output` flag added so the README's documented command actually works. Publish to PyPI; tag v0.1: **not done** — `uv build` verified clean, but `git tag v0.1.0`, `git push --tags`, and `uv publish` are intentionally left for a human to run, per CLAUDE.md's publish-approval rule. *Done: `uvx mcphound@0.1.0 scan <config>` works on a stranger's machine — blocked only on the tag/publish step above.*
 - [ ] **W6** — Launch post: Show HN, r/mcp, r/cybersecurity, X/LinkedIn; dogfood on your own `.mcp.json`. *Done: 100 stars target; collect first 5 issues.*
 
 ### Phase 2 — v0.2 hardening (Weeks 7–9)
 
 - [ ] **W7** — False-positive sweep: run against the 50 most-installed registry servers; tune severity/confidence; document every FP in CHANGELOG.
-- [ ] **W8** — Docs site pass (usage, rule catalog with OWASP mappings, false-positive reporting flow); `mcpvet scan --self` dogfood command.
+- [ ] **W8** — Docs site pass (usage, rule catalog with OWASP mappings, false-positive reporting flow); `mcphound scan --self` dogfood command.
 - [ ] **W9** — Buffer/week: bugfixes from launch feedback, first external PRs, community rules process (`GOVERNANCE.md`).
 
 ### Phase 3 — v1.0-beta reputation site + API (Weeks 10–17)

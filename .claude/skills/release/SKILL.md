@@ -1,13 +1,13 @@
 ---
 name: release
-description: Use before cutting a release of mcpvet or publishing the GitHub Action. Full pre-flight checklist.
+description: Use before cutting a release of mcphound or publishing the GitHub Action. Full pre-flight checklist.
 ---
 
 # Release checklist
 
 1. `uv run pytest -q` — all green.
 2. `uv run ruff check .` — clean.
-3. `uv run mcpvet scan .mcp.json opencode.jsonc --fail-on high` — scanner passes over the repo's own agent configs (dogfood, same command as `make scan-self`). Zero unacknowledged high/critical findings.
+3. `uv run mcphound scan .mcp.json opencode.jsonc --fail-on high` — scanner passes over the repo's own agent configs (dogfood, same command as `make scan-self`). Zero unacknowledged high/critical findings.
 4. Scan the 5 most-downloaded community MCP servers as a canary batch; compare scores to previous release — document any score changes in CHANGELOG.
 5. SARIF output verified to load in GitHub code scanning (test on a throwaway branch).
 6. Version bumped in `pyproject.toml`; CHANGELOG entry with Conventional Commits; git tag `vX.Y.Z`.

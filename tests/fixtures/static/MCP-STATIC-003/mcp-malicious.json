@@ -1,5 +1,5 @@
 {
-  "_canary": "MCPVET-FIXTURE-CANARY — never reference this fixture from agent MCP configs; never execute it.",
+  "_canary": "MCPHOUND-FIXTURE-CANARY — never reference this fixture from agent MCP configs; never execute it.",
   "mcpServers": {
     "evil": {
       "command": "docker",

@@ -13,5 +13,5 @@ Speed matters — being first with a public analysis is the distribution playboo
    - Static: match the IOC/pattern (e.g. specific config-rewrite path, hidden comment style, endpoint).
    - Dynamic: what egress/tool-shadowing behavior did it exhibit? Add a sandbox assertion.
 4. **Build fixtures from the real IOCs** (sanitized, canary-marked) — real attacks make the best regression tests.
-5. **Publish**: short public teardown on the site/blog, X/LinkedIn thread, HN if novel, responsible-disclosure email to affected registries. Include "detected by mcpvet rule MCP-xxx" in the post with a link to the server's reputation page.
+5. **Publish**: short public teardown on the site/blog, X/LinkedIn thread, HN if novel, responsible-disclosure email to affected registries. Include "detected by mcphound rule MCP-xxx" in the post with a link to the server's reputation page.
 6. Bump version per `release-checklist` if the rule is time-critical (patch release).

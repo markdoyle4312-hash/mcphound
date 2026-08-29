@@ -21,12 +21,12 @@ jobs:
       - name: Tests
         run: uv run pytest -q
       - name: SARIF output smoke test
-        run: uv run mcpvet scan tests/fixtures --sarif -o mcpvet-results.sarif || true
+        run: uv run mcphound scan tests/fixtures --sarif -o mcphound-results.sarif || true
       - name: Upload SARIF (works once findings exist)
-        if: hashFiles('mcpvet-results.sarif') != ''
+        if: hashFiles('mcphound-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: mcpvet-results.sarif
+          sarif_file: mcphound-results.sarif
 
   self-scan:
     runs-on: ubuntu-latest
@@ -37,9 +37,9 @@ jobs:
           if [ -f pyproject.toml ]; then
             pip install uv -q
             uv sync
-            uv run mcpvet scan .mcp.json opencode.jsonc --fail-on high --json
+            uv run mcphound scan .mcp.json opencode.jsonc --fail-on high --json
           else
-            echo "mcpvet not built yet"
+            echo "mcphound not built yet"
           fi
 
   nightly-registry-scan:
@@ -51,4 +51,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: uv sync
-      - run: uv run mcpvet registry-poll --config config/registry.yaml
+      - run: uv run mcphound registry-poll --config config/registry.yaml

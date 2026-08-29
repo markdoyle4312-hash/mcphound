@@ -1,5 +1,5 @@
 # mcp-policy.yaml — enforce which MCP servers your organisation allows.
-# Used by `mcpvet allowlist enforce` and the GitHub Action (Phase 4, W18+).
+# Used by `mcphound allowlist enforce` and the GitHub Action (Phase 4, W18+).
 version: 1
 
 # Default posture for any server not listed below.
@@ -17,7 +17,7 @@ servers:
     action: ask        # browser automation: require human sign-off per repo
   postgres:
     action: allow
-    env_required: ["MCPVET_DATABASE_URL_RO"]  # DSN must come from env, never literal
+    env_required: ["MCPHOUND_DATABASE_URL_RO"]  # DSN must come from env, never literal
 
 blocked_patterns:
   # Block any server matching these name/regex patterns (typosquats etc.).

@@ -13,8 +13,8 @@ repos:
 
   - repo: local
     hooks:
-      - id: mcpvet-self-scan
-        name: mcpvet self-scan of agent MCP configs
+      - id: mcphound-self-scan
+        name: mcphound self-scan of agent MCP configs
         language: system
         entry: scripts/self-scan.sh
         files: '(\.mcp\.json|opencode\.jsonc?|\.claude/settings\.json)$'

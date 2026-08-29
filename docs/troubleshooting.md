@@ -9,7 +9,7 @@ claude mcp remove context7 -s user
 claude mcp remove postgres -s user
 Then run /mcp inside Claude Code to verify each server shows once and connects.
 
-"Missing environment variables: MCPVET_DATABASE_URL_RO"
+"Missing environment variables: MCPHOUND_DATABASE_URL_RO"
 The postgres MCP server needs a database DSN. You don't need it until Phase 3
 (week 10+, reputation DB work) — it is intentionally NOT in .mcp.json at the
 start, so this warning should disappear after the scope cleanup above.
@@ -21,7 +21,7 @@ JSON
 
 {
   "env": {
-    "MCPVET_DATABASE_URL_RO": "postgresql://mcpvet_ro:password@localhost:5432/mcpvet_dev"
+    "MCPHOUND_DATABASE_URL_RO": "postgresql://mcphound_ro:password@localhost:5432/mcphound_dev"
   }
 }
 Claude Code applies the env block to the session and spawned MCP servers
@@ -29,7 +29,7 @@ inherit it. Windows PowerShell alternative (persistent user env var):
 
 PowerShell
 
-[Environment]::SetEnvironmentVariable("MCPVET_DATABASE_URL_RO","postgresql://mcpvet_ro:password@localhost:5432/mcpvet_dev","User")
+[Environment]::SetEnvironmentVariable("MCPHOUND_DATABASE_URL_RO","postgresql://mcphound_ro:password@localhost:5432/mcphound_dev","User")
 Restart the terminal and Claude Code after setting it.
 
 Windows notes

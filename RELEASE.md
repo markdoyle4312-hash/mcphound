@@ -9,10 +9,10 @@ output.py
 
 pyproject.toml
  → [project.urls]
- Package name is available on PyPI. Check https://pypi.org/project/mcpvet/ in a browser (404 = free) or:
+ Package name is available on PyPI. Check https://pypi.org/project/mcphound/ in a browser (404 = free) or:
 PowerShell
 
-uv pip index versions mcpvet
+uv pip index versions mcphound
 If taken, rename in
 pyproject.toml
  now — renaming after your first publish means a second, permanent package name forever.
@@ -26,7 +26,7 @@ pyproject.toml
  classifiers (Python 3.12+, Apache-2.0, intended audience)
  keywords = ["mcp", "security", "supply-chain", "ai-agents", "sarif"]
 3. Build and verify the WHEEL CONTENTS (critical)
-Your YAML detection rules live inside src/mcpvet/rules/. If they aren't
+Your YAML detection rules live inside src/mcphound/rules/. If they aren't
 packed into the wheel, installed users get a scanner with zero rules —
 tests pass locally but the published package is broken.
 
@@ -34,7 +34,7 @@ Bash
 
 uv build
 # inspect the wheel — you MUST see the .yaml rule files listed:
-python -m zipfile -l dist/mcpvet-0.1.0-py3-none-any.whl | findstr yaml
+python -m zipfile -l dist/mcphound-0.1.0-py3-none-any.whl | findstr yaml
 Expected:
 MCP-STATIC-001.yaml
  and 002.yaml in the listing.
@@ -45,15 +45,15 @@ pyproject.toml
 toml
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/mcpvet/rules" = "mcpvet/rules"
+"src/mcphound/rules" = "mcphound/rules"
 4. Test the BUILT ARTIFACT in a clean environment
 Bash
 
 uv venv /tmp/wheel-test
-/tmp/wheel-test/Scripts/pip install dist/mcpvet-0.1.0-py3-none-any.whl   # PowerShell
+/tmp/wheel-test/Scripts/pip install dist/mcphound-0.1.0-py3-none-any.whl   # PowerShell
 # then from a DIFFERENT directory (so it uses the installed package, not the repo):
-cd .. && /tmp/wheel-test/Scripts/mcpvet inspect
-/tmp/wheel-test/Scripts/mcpvet scan <path-to-some-.mcp.json> --json
+cd .. && /tmp/wheel-test/Scripts/mcphound inspect
+/tmp/wheel-test/Scripts/mcphound scan <path-to-some-.mcp.json> --json
 Confirm: CLI runs, rules load (findings appear for a secret fixture), no import errors.
 
 5. Dry-run publish to TestPyPI
@@ -85,7 +85,7 @@ git push origin v0.1.0
  GitHub Release with notes: what v0.1 does, install command, rule list with OWASP mappings, "not yet: dynamic analysis/reputation site" expectations.
  Update the homepage/repo description and topics.
 8. Launch (Roadmap W6 — same day if possible)
- Show HN: title like "Show HN: mcpvet – scan your Claude/Cursor MCP servers for supply-chain risks"
+ Show HN: title like "Show HN: mcphound – scan your Claude/Cursor MCP servers for supply-chain risks"
  Post to r/mcp, r/cybersecurity, r/ClaudeAI, r/ChatGPTCoding, X, LinkedIn
  Pin the install one-liner: uvx mcphound scan
  Watch issues for 48h — the first false-positive report is a release-blocker patch.

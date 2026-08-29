@@ -20,7 +20,7 @@ MCP server.
 
 ### What v0.1 does
 
-mcpvet discovers the MCP servers configured in your AI coding clients
+mcphound discovers the MCP servers configured in your AI coding clients
 (Claude Desktop/Code, Cursor, Windsurf, Gemini CLI, OpenCode — both `.json`
 and JSON5-style `.jsonc`) and runs a set of static detection rules against
 each server's launch command, environment, and (optionally) npm registry
@@ -28,8 +28,7 @@ metadata. Every finding maps to an OWASP LLM Top 10 or Agentic/MCP Top 10
 code. Output is human-readable by default, or `--json` / `--sarif` for
 tooling and GitHub code scanning, with `--fail-on` exit codes for CI.
 
-Install and run (published on PyPI as `mcphound`; `mcpvet` is kept as a
-back-compat command alias):
+Install and run (published on PyPI as `mcphound`):
 
 ```bash
 uvx mcphound scan
@@ -63,8 +62,8 @@ malicious fixture, a benign fixture (false-positive guard), and a pytest.
 ### Added
 - Config discovery for Claude Desktop/Code, Cursor, Windsurf, Gemini CLI,
   and OpenCode (`.json` and `.jsonc`, including trailing-comma JSON5 style).
-- `mcpvet inspect` — lists configured servers without executing them.
-- `mcpvet scan` — runs detection rules; `--json`, `--sarif`, `--fail-on`,
+- `mcphound inspect` — lists configured servers without executing them.
+- `mcphound scan` — runs detection rules; `--json`, `--sarif`, `--fail-on`,
   `-o/--output`, and `--deep` (opt-in network-dependent checks).
 - SARIF 2.1.0 output for GitHub code scanning.
 - Seven static detection rules — see table above.
@@ -89,25 +88,16 @@ malicious fixture, a benign fixture (false-positive guard), and a pytest.
 - Package provenance (`MCP-STATIC-007`) only checks for a missing npm
   `repository` field. Postinstall-script inspection and registry-age checks
   (both named in ROADMAP.md's W4) are not implemented yet.
-- The typosquat reference list (`src/mcpvet/rules/data/known_servers.yaml`)
+- The typosquat reference list (`src/mcphound/rules/data/known_servers.yaml`)
   is a small hand-curated seed, not the official registry — Phase 2's
   registry poller will supersede it.
 - PyPI packages (`uvx`-launched) aren't covered by MCP-STATIC-007 yet, only
   npm/`npx`.
-- The PyPI *distribution name* is `mcphound`, not `mcpvet`. `mcpvet` on
-  PyPI belongs to an unrelated package; `mcp-vet` was rejected by PyPI as
-  "too similar to an existing project" (its name-similarity check strips
-  hyphens/underscores before comparing, so `mcp-vet` collided with
-  `mcpvet`); `mcpaudit` belongs to a different, actively-maintained MCP
-  security scanner. The importable module and CLI command are still
-  `mcpvet` — `pip install mcphound` installs both the `mcphound` and
-  `mcpvet` commands (same entry point), so `uvx mcphound scan` and
-  `uvx --from mcphound mcpvet scan` both work.
 
 ### Dogfood / canary results
-- `mcpvet scan .mcp.json opencode.jsonc --fail-on high`: zero findings against
+- `mcphound scan .mcp.json opencode.jsonc --fail-on high`: zero findings against
   this repo's own agent configs.
-- `mcpvet scan --deep` against 5 well-known real MCP packages
+- `mcphound scan --deep` against 5 well-known real MCP packages
   (`@modelcontextprotocol/server-filesystem`, `-postgres`, `-everything`,
   `@upstash/context7-mcp`, `@playwright/mcp`): one genuine finding —
   `@modelcontextprotocol/server-postgres` has no `repository` field in its
