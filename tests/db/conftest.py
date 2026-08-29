@@ -5,6 +5,7 @@ call is mocked)."""
 
 from __future__ import annotations
 
+import datetime as dt
 import os
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from alembic.config import Config as AlembicConfig
 
 from alembic import command
 from mcphound.db import session as db_session
+from mcphound.db.models import Server, Version
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -47,3 +49,53 @@ def db_session_fixture():
         session.rollback()
     finally:
         session.close()
+
+
+@pytest.fixture
+def seed_version(db_session_fixture):
+    """Factory fixture: seed_version() -> (Server, Version), both flushed
+    (have real ids) but not committed. Callers can override any Version
+    column via kwargs, e.g. seed_version(registry_type="pypi")."""
+
+    def _seed(
+        *,
+        server_name: str = "io.github.acme/tool",
+        version: str = "1.0.0",
+        registry_type: str = "npm",
+        identifier: str = "@acme/tool",
+        transport: str | None = "stdio",
+        runtime_arguments=None,
+        package_arguments=None,
+        environment_variables=None,
+        is_latest: bool = True,
+        delisted_at=None,
+    ) -> tuple[Server, Version]:
+        now = dt.datetime.now(dt.UTC)
+        server = Server(
+            name=server_name,
+            raw_json={},
+            first_seen_at=now,
+            last_seen_at=now,
+        )
+        db_session_fixture.add(server)
+        db_session_fixture.flush()
+        ver = Version(
+            server_id=server.id,
+            version=version,
+            registry_type=registry_type,
+            identifier=identifier,
+            transport=transport,
+            runtime_arguments=runtime_arguments,
+            package_arguments=package_arguments,
+            environment_variables=environment_variables,
+            is_latest=is_latest,
+            raw_json={},
+            first_seen_at=now,
+            last_seen_at=now,
+            delisted_at=delisted_at,
+        )
+        db_session_fixture.add(ver)
+        db_session_fixture.flush()
+        return server, ver
+
+    return _seed
