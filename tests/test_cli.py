@@ -99,3 +99,47 @@ def test_scan_deep_runs_network_rules(monkeypatch):
     result = runner.invoke(app, ["scan", str(cfg), "--deep", "--json"])
     assert result.exit_code == 0
     assert "MCP-STATIC-007" in _finding_rule_ids(result.stdout)
+
+
+def test_scan_self_only_reads_project_local_configs(tmp_path, monkeypatch):
+    from mcphound.discovery import clients as discovery_clients
+
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setattr(discovery_clients, "HOME", fake_home)
+    # A "user-level" config that --self must ignore, even though it exists.
+    (fake_home / ".mcp.json").write_text('{"mcpServers": {}}', encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".mcp.json").write_text(
+        (FIXTURES / "static" / "MCP-STATIC-001" / "mcp-malicious.json").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+    result = runner.invoke(app, ["scan", "--self", "--json"])
+    assert result.exit_code == 0
+    assert "MCP-STATIC-001" in _finding_rule_ids(result.stdout)
+
+
+def test_scan_self_rejects_explicit_config():
+    runner = CliRunner()
+    cfg = FIXTURES / "static" / "MCP-STATIC-001" / "mcp-malicious.json"
+    result = runner.invoke(app, ["scan", "--self", str(cfg)])
+    assert result.exit_code != 0
+    assert "--self" in result.output
+
+
+def test_feedback_prints_prefilled_github_issue_url():
+    runner = CliRunner()
+    result = runner.invoke(app, ["feedback", "MCP-STATIC-004", "--note", "pinned via lockfile"])
+    assert result.exit_code == 0
+    assert "github.com/markdoyle4312-hash/mcphound/issues/new" in result.stdout
+    assert "MCP-STATIC-004" in result.stdout
+
+
+def test_feedback_errors_on_unknown_rule_id():
+    runner = CliRunner()
+    result = runner.invoke(app, ["feedback", "MCP-STATIC-999"])
+    assert result.exit_code != 0
+    assert "unknown rule id" in result.output

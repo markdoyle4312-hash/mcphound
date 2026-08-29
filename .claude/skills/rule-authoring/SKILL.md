@@ -73,6 +73,7 @@ YAML rule. Prefer extending the regex path unless the check is genuinely not reg
 - `uv run pytest tests/test_rules.py -q` passes.
 - Run `uv run mcphound scan tests/fixtures/static/<id>/mcp-malicious.json --json` and eyeball the output.
 - No separate rule index to update — `rules/loader.py` globs every `*.yaml` in `src/mcphound/rules/` automatically.
+- Run `make docs` (or `uv run python scripts/generate_rule_docs.py`) to regenerate `docs/rules.md` from the rule YAML — CI's `docs-check` job fails the build if it's stale.
 - Never run the malicious fixture's server — static rules never execute anything. Dynamic rules only execute inside the Docker sandbox runner.
 
 ## Rule numbering convention

@@ -38,14 +38,21 @@ def _user_config_paths() -> list[Path]:
     return paths
 
 
-def discover_configs() -> list[Path]:
-    """Project configs first, then user-level configs; only existing files."""
-    project_local = [
+def _project_local_paths() -> list[Path]:
+    return [
         Path.cwd() / ".mcp.json",
         Path.cwd() / "opencode.json",
         Path.cwd() / "opencode.jsonc",
     ]
-    return [p for p in project_local + _user_config_paths() if p.exists()]
+
+
+def discover_configs(project_only: bool = False) -> list[Path]:
+    """Project configs first, then user-level configs (skipped if `project_only`);
+    only existing files."""
+    candidates = _project_local_paths()
+    if not project_only:
+        candidates += _user_config_paths()
+    return [p for p in candidates if p.exists()]
 
 
 def _strip_jsonc(text: str) -> str:
@@ -139,7 +146,7 @@ def _as_command_list(entry: dict) -> list[str]:
 
 
 def load_servers(path: Path) -> list[ServerConfig]:
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     if path.suffix == ".jsonc":
         text = _strip_jsonc(text)
         text = _strip_trailing_commas(text)

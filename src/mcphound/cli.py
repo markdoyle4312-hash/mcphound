@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 
 import typer
 
+from . import __version__
 from .discovery.clients import discover_configs, load_servers
 from .models import SEVERITY_ORDER, ScanResult
 from .output import to_json, to_sarif
@@ -19,10 +21,14 @@ app = typer.Typer(
     help="mcphound — security scanner for MCP servers and agent skills.",
 )
 
+FEEDBACK_REPO = "markdoyle4312-hash/mcphound"
 
-def _collect(paths: list[Path] | None, deep: bool = False) -> tuple[ScanResult, list[Path]]:
+
+def _collect(
+    paths: list[Path] | None, deep: bool = False, project_only: bool = False
+) -> tuple[ScanResult, list[Path]]:
     explicit = paths is not None
-    config_paths = paths or discover_configs()
+    config_paths = paths or discover_configs(project_only=project_only)
     servers = []
     missing: list[Path] = []
     for p in config_paths:
@@ -89,13 +95,25 @@ def scan(
             "Slower and not fully deterministic offline; off by default.",
         ),
     ] = False,
+    self_: Annotated[
+        bool,
+        typer.Option(
+            "--self",
+            help="Only scan this project's own configs (.mcp.json, opencode.json[c] in "
+            "the current directory) - skip user-level client configs. For CI/dogfood use "
+            "where you want your repo's committed configs checked, not the machine's.",
+        ),
+    ] = False,
     output: Annotated[
         Path | None,
         typer.Option("-o", "--output", help="Write output to this file instead of stdout"),
     ] = None,
 ):
     """Scan MCP configurations for security issues (static analysis only)."""
-    result, missing = _collect(config, deep=deep)
+    if self_ and config is not None:
+        typer.echo("Error: --self can't be combined with explicit config file(s).", err=True)
+        raise typer.Exit(2)
+    result, missing = _collect(config, deep=deep, project_only=self_)
 
     for p in missing:
         typer.echo(f"Warning: config file not found: {p}", err=True)
@@ -124,6 +142,52 @@ def scan(
     )
     if missing or severity_exceeded:
         raise typer.Exit(1)
+
+
+@app.command()
+def feedback(
+    rule_id: Annotated[
+        str,
+        typer.Argument(help="Rule ID this finding is a false positive for, e.g. MCP-STATIC-004"),
+    ],
+    note: Annotated[
+        str | None,
+        typer.Option("--note", help="Why you believe this is a false positive"),
+    ] = None,
+):
+    """Print a pre-filled GitHub issue URL for reporting a false positive.
+
+    No network call and no GitHub auth — it only builds a URL for you to open.
+    """
+    rules = {r["id"]: r for r in load_rules()}
+    rule = rules.get(rule_id)
+    if rule is None:
+        typer.echo(
+            f"Error: unknown rule id {rule_id!r}. Known rules: {', '.join(sorted(rules))}",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    title = f"False positive: {rule_id} — {rule.get('title', '')}"
+    body = "\n".join(
+        [
+            f"**Rule:** {rule_id} — {rule.get('title', '')}",
+            f"**mcphound version:** {__version__}",
+            "",
+            "**Why this is a false positive:**",
+            note or "<describe here>",
+            "",
+            "**Config snippet that triggered it** (redact secrets/tokens before pasting):",
+            "```json",
+            "",
+            "```",
+        ]
+    )
+    url = (
+        f"https://github.com/{FEEDBACK_REPO}/issues/new"
+        f"?title={quote(title)}&labels={quote('false-positive')}&body={quote(body)}"
+    )
+    typer.echo(f"Report a false positive for {rule_id}:\n\n{url}")
 
 
 if __name__ == "__main__":

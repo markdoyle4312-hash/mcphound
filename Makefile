@@ -1,4 +1,4 @@
-.PHONY: install test lint format scan-self fixtures
+.PHONY: install test lint format scan-self fixtures docs docs-check
 
 install:
 	uv sync --extra dev
@@ -12,11 +12,18 @@ lint:
 format:
 	uv run ruff format .
 
-# Dogfood: scan this repo's own agent MCP configs
+# Dogfood: scan this repo's own agent MCP configs (project-local only, not the machine's)
 scan-self:
-	uv run mcphound scan .mcp.json opencode.jsonc --fail-on high || \
-		bash scripts/self-scan.sh
+	uv run mcphound scan --self --fail-on high
 
 fixtures:
 	@echo "Fixtures must contain MCPHOUND-FIXTURE-CANARY and must never be"
 	@echo "referenced from .mcp.json / opencode.jsonc / any agent config."
+
+# Regenerate docs/rules.md from src/mcphound/rules/*.yaml
+docs:
+	uv run python scripts/generate_rule_docs.py
+
+# CI guard: fail if docs/rules.md is stale relative to the rule YAML files
+docs-check: docs
+	git diff --exit-code docs/rules.md

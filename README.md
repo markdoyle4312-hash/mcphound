@@ -35,7 +35,23 @@ mcphound scan .mcp.json --json -o mcphound-preview.json
 # opt-in: also run network-dependent checks (npm registry provenance) — slower,
 # not fully deterministic offline, so it's off unless you ask for it
 mcphound scan --deep
+
+# dogfood: scan only this project's own configs (.mcp.json, opencode.json[c] in
+# the current directory), skipping user-level client configs — for CI/pre-commit
+mcphound scan --self --fail-on high
 ```
+
+Full rule catalog with OWASP mappings: [docs/rules.md](docs/rules.md).
+
+## Reporting a false positive
+
+```bash
+mcphound feedback MCP-STATIC-004 --note "why you think this is wrong"
+```
+
+Prints a pre-filled GitHub issue URL — no network call, no auth. Redact secrets
+from any config snippet before pasting it into the issue. See
+[GOVERNANCE.md](GOVERNANCE.md#false-positives) for the full policy.
 
 ## Development
 
@@ -44,6 +60,7 @@ uv sync --extra dev
 uv run pytest -q          # tests
 uv run ruff check .       # lint
 make scan-self            # scan this repo's own agent configs (dogfood)
+make docs                 # regenerate docs/rules.md from the rule YAML files
 ```
 
 ## Safety

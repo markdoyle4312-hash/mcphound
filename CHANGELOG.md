@@ -6,6 +6,36 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### W8 docs pass + dogfood command
+
+- **`docs/rules.md`** — a generated rule catalog (ID, title, severity, confidence,
+  OWASP mapping, detection summary, recommendation, references) built by
+  `scripts/generate_rule_docs.py` from `src/mcphound/rules/*.yaml`. Never hand-edit
+  it — it can't drift from the actual rules because it isn't hand-maintained. `make
+  docs` regenerates it; a new `docs-check` CI job fails the build if it's stale.
+- **`mcphound scan --self`** — scans only this project's own configs (`.mcp.json`,
+  `opencode.json`/`opencode.jsonc` in the current directory), skipping user-level
+  client configs. Replaces the hardcoded-filename dogfood pattern in the Makefile
+  and CI's `self-scan` job; the now-fully-superseded `scripts/self-scan.sh`
+  (a pre-mcphound W1 fallback) is deleted.
+- **`mcphound feedback <rule-id> [--note TEXT]`** — prints a pre-filled GitHub
+  "new issue" URL for reporting a false positive (rule ID/title, mcphound version,
+  a redaction reminder). No network call, no auth. Implements the flow
+  GOVERNANCE.md's "False positives" section had marked "to be built."
+
+### Fixed
+
+- `src/mcphound/__init__.py`'s `__version__` was hardcoded `"0.1.0"` while the
+  package had already shipped `0.1.2` — it now reads from installed package
+  metadata (`importlib.metadata.version`), so it can't drift from `pyproject.toml`
+  again.
+- `rules/loader.py` and `discovery/clients.py` read YAML/config files with
+  `Path.read_text()` (no explicit encoding), which decoded non-ASCII characters
+  (e.g. em dashes in rule `description`/`detail` text) using the platform default
+  encoding — mojibake on Windows, where that default isn't UTF-8. Both now force
+  `encoding="utf-8"`. Found while generating `docs/rules.md`, whose output was
+  visibly corrupted before this fix.
+
 ### W7 false-positive sweep
 
 Ran `mcphound scan --deep` against a corpus of 36 real, source-verified MCP server

@@ -10,7 +10,7 @@
 - Test payloads use canary markers (`MCPHOUND-FIXTURE-CANARY`) and RFC2606 domains (`example.com`); never working exfiltration against real services.
 
 ## False positives
-- Report via `--feedback` (to be built) or GitHub issues with the config. FP fixes are release-blockers; they get changelog entries.
+- Report via `mcphound feedback <rule-id> [--note "..."]` — it prints a pre-filled GitHub issue URL (no network call, no auth) with the rule, your mcphound version, and a place to paste a redacted config snippet. Or file a GitHub issue directly with the config. FP fixes are release-blockers; they get changelog entries.
 
 ## Security policy
 - Security reports: SECURITY.md at launch (use GitHub private advisories until then).
