@@ -71,14 +71,16 @@ def seed_version(db_session_fixture):
         delisted_at=None,
     ) -> tuple[Server, Version]:
         now = dt.datetime.now(dt.UTC)
-        server = Server(
-            name=server_name,
-            raw_json={},
-            first_seen_at=now,
-            last_seen_at=now,
-        )
-        db_session_fixture.add(server)
-        db_session_fixture.flush()
+        server = db_session_fixture.query(Server).filter_by(name=server_name).one_or_none()
+        if server is None:
+            server = Server(
+                name=server_name,
+                raw_json={},
+                first_seen_at=now,
+                last_seen_at=now,
+            )
+            db_session_fixture.add(server)
+            db_session_fixture.flush()
         ver = Version(
             server_id=server.id,
             version=version,

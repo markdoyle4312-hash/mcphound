@@ -15,9 +15,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db.models import Finding as FindingRow
-from ..db.models import Hash, Scan, Version
+from ..db.models import Hash, Scan, ServerScore, Version
 from ..rules.engine import evaluate
 from .adapter import version_to_server_config
+from .scoring import dedupe_by_rule_id, score_server
 
 logger = logging.getLogger(__name__)
 
@@ -112,5 +113,72 @@ def run_scan(session: Session, rules: list[dict], mcphound_version: str) -> Scan
         _write_scan(session, version.id, mcphound_version, findings, status="ok")
         summary.versions_scanned += 1
         summary.findings_written += len(findings)
+    session.flush()
+    return summary
+
+
+@dataclass
+class ScoringSummary:
+    servers_scored: int = 0
+
+    def format(self) -> str:
+        return f"servers scored: {self.servers_scored}"
+
+
+def _in_scope_server_ids(session: Session) -> list[int]:
+    return list(
+        session.execute(
+            select(Version.server_id)
+            .where(Version.is_latest.is_(True), Version.delisted_at.is_(None))
+            .distinct()
+        ).scalars()
+    )
+
+
+def _latest_ok_scan_findings(session: Session, version_id: int) -> list[FindingRow]:
+    scan = (
+        session.execute(
+            select(Scan)
+            .where(Scan.version_id == version_id, Scan.status == "ok")
+            .order_by(Scan.scanned_at.desc())
+            .limit(1)
+        )
+        .scalars()
+        .first()
+    )
+    if scan is None:
+        return []
+    return list(
+        session.execute(select(FindingRow).where(FindingRow.scan_id == scan.id)).scalars()
+    )
+
+
+def run_scoring(session: Session, mcphound_version: str) -> ScoringSummary:
+    """Aggregates each server's in-scope versions' most recent successful
+    scan into one unioned, de-duplicated finding set, scores it, and writes
+    a ServerScore row. Independent of run_scan — can be re-run on its own
+    (e.g. after tuning scoring.SEVERITY_WEIGHT) without rescanning."""
+    summary = ScoringSummary()
+    for server_id in _in_scope_server_ids(session):
+        version_ids = session.execute(
+            select(Version.id).where(
+                Version.server_id == server_id,
+                Version.is_latest.is_(True),
+                Version.delisted_at.is_(None),
+            )
+        ).scalars().all()
+        findings: list[FindingRow] = []
+        for version_id in version_ids:
+            findings.extend(_latest_ok_scan_findings(session, version_id))
+        unioned = dedupe_by_rule_id(findings)
+        session.add(
+            ServerScore(
+                server_id=server_id,
+                score=score_server(unioned),
+                finding_count=len(unioned),
+                mcphound_version=mcphound_version,
+            )
+        )
+        summary.servers_scored += 1
     session.flush()
     return summary
