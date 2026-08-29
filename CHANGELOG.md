@@ -4,6 +4,15 @@ All notable changes to mcphound are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); this project doesn't use
 SemVer strictly pre-1.0 (see ROADMAP.md).
 
+## [0.1.2] — 2026-08-29
+
+### Changed
+- Finished the `mcpvet`/`mcp-vet` → `mcphound` rename across docs, configs,
+  and test fixtures. Removed the `mcpvet` back-compat CLI alias — `mcphound`
+  is the only entry point now. Renamed the fixture canary marker to
+  `MCPHOUND-FIXTURE-CANARY` and the example DB env vars to
+  `MCPHOUND_DATABASE_URL_RO`.
+
 ## [0.1.1] — 2026-08-29
 
 ### Fixed
