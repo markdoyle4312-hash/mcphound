@@ -172,7 +172,11 @@ def _mark_delisted(session: Session, run_started_at: dt.datetime, summary: PollS
     summary.versions_delisted = result.rowcount
 
 
-def _undelist_reappeared(session: Session, run_started_at: dt.datetime, summary: PollSummary) -> None:
+def _undelist_reappeared(
+    session: Session,
+    run_started_at: dt.datetime,
+    summary: PollSummary,
+) -> None:
     result = session.execute(
         update(Server)
         .where(Server.last_seen_at == run_started_at, Server.delisted_at.isnot(None))
@@ -190,7 +194,7 @@ def _undelist_reappeared(session: Session, run_started_at: dt.datetime, summary:
 def run_poll(session: Session, base_url: str, page_limit: int) -> PollSummary:
     """Page the full registry, upsert servers/versions/hashes, and mark-and-sweep
     anything no longer present. The caller commits or rolls back."""
-    run_started_at = dt.datetime.now(dt.timezone.utc)
+    run_started_at = dt.datetime.now(dt.UTC)
     summary = PollSummary()
 
     for entry in iter_servers(base_url, page_limit):

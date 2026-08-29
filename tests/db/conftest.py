@@ -9,9 +9,9 @@ import os
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config as AlembicConfig
 
+from alembic import command
 from mcphound.db import session as db_session
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
