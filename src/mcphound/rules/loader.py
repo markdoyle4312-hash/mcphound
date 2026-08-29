@@ -1,4 +1,4 @@
-"""Load YAML detection rules from src/mcpvet/rules/*.yaml."""
+"""Load YAML detection rules from src/mcphound/rules/*.yaml."""
 
 from __future__ import annotations
 

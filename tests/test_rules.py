@@ -1,7 +1,7 @@
-from mcpvet.discovery.clients import load_servers
-from mcpvet.output import to_sarif
-from mcpvet.rules.engine import evaluate
-from mcpvet.rules.loader import load_rules
+from mcphound.discovery.clients import load_servers
+from mcphound.output import to_sarif
+from mcphound.rules.engine import evaluate
+from mcphound.rules.loader import load_rules
 from tests.conftest import fixture_path
 
 RULES = load_rules()
@@ -61,7 +61,7 @@ def test_typosquat_rule_allows_exact_known_name():
 
 
 def test_npm_provenance_rule_fires_on_missing_repository(monkeypatch):
-    from mcpvet.rules import engine
+    from mcphound.rules import engine
 
     monkeypatch.setattr(
         engine,
@@ -72,7 +72,7 @@ def test_npm_provenance_rule_fires_on_missing_repository(monkeypatch):
 
 
 def test_npm_provenance_rule_allows_package_with_repository(monkeypatch):
-    from mcpvet.rules import engine
+    from mcphound.rules import engine
 
     monkeypatch.setattr(
         engine,
@@ -88,7 +88,7 @@ def test_npm_provenance_rule_allows_package_with_repository(monkeypatch):
 
 
 def test_npm_provenance_rule_skips_silently_on_network_failure(monkeypatch):
-    from mcpvet.rules import engine
+    from mcphound.rules import engine
 
     monkeypatch.setattr(engine, "_fetch_npm_metadata", lambda pkg: None)
     assert "MCP-STATIC-007" not in _finding_ids("mcp-malicious.json", "MCP-STATIC-007")
@@ -107,7 +107,7 @@ def test_every_finding_is_owasp_mapped():
 def test_sarif_serializes():
     servers = load_servers(fixture_path("MCP-STATIC-002", "mcp-malicious.json"))
     findings = evaluate(servers[0], RULES)
-    from mcpvet.models import ScanResult
+    from mcphound.models import ScanResult
 
     sarif = to_sarif(ScanResult(servers=servers, findings=findings))
     assert sarif["version"] == "2.1.0"

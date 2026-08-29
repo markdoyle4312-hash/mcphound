@@ -40,15 +40,15 @@ dev = [
 ]
 
 [project.scripts]
-mcphound = "mcpvet.cli:app"
-mcpvet = "mcpvet.cli:app"  # back-compat alias from the pre-rename mcp-vet distribution
+mcphound = "mcphound.cli:app"
+mcpvet = "mcphound.cli:app"  # back-compat alias from the pre-rename mcpvet/mcp-vet names
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mcpvet"]
+packages = ["src/mcphound"]
 
 [tool.ruff]
 line-length = 100

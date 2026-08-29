@@ -14,7 +14,7 @@ format:
 
 # Dogfood: scan this repo's own agent MCP configs
 scan-self:
-	uv run mcpvet scan .mcp.json opencode.jsonc --fail-on high || \
+	uv run mcphound scan .mcp.json opencode.jsonc --fail-on high || \
 		bash scripts/self-scan.sh
 
 fixtures:

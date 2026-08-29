@@ -1,4 +1,4 @@
-"""mcpvet CLI — scan and inspect MCP configurations without executing servers."""
+"""mcphound CLI — scan and inspect MCP configurations without executing servers."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from .rules.loader import load_rules
 
 app = typer.Typer(
     add_completion=False,
-    help="mcpvet — security scanner for MCP servers and agent skills.",
+    help="mcphound — security scanner for MCP servers and agent skills.",
 )
 
 

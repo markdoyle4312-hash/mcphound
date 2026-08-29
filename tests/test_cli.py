@@ -3,7 +3,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from mcpvet.cli import app
+from mcphound.cli import app
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -39,7 +39,7 @@ def _finding_rule_ids(stdout: str) -> set[str]:
 
 
 def test_scan_excludes_network_rules_by_default(monkeypatch):
-    from mcpvet.rules import engine
+    from mcphound.rules import engine
 
     monkeypatch.setattr(
         engine,
@@ -54,7 +54,7 @@ def test_scan_excludes_network_rules_by_default(monkeypatch):
 
 
 def test_scan_deep_runs_network_rules(monkeypatch):
-    from mcpvet.rules import engine
+    from mcphound.rules import engine
 
     monkeypatch.setattr(
         engine,

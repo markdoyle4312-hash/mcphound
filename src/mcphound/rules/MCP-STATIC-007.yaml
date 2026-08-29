@@ -2,7 +2,7 @@ id: MCP-STATIC-007
 title: npm package has no discoverable source repository
 owasp: AST04          # Supply chain: malicious/unsigned tooling
 phase: static
-network: true          # queries registry.npmjs.org — opt-in via `mcpvet scan --deep`
+network: true          # queries registry.npmjs.org — opt-in via `mcphound scan --deep`
 severity: medium
 confidence: low
 description: >

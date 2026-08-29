@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from mcpvet.discovery.clients import load_servers
+from mcphound.discovery.clients import load_servers
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

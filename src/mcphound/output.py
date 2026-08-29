@@ -57,7 +57,7 @@ def to_sarif(result: ScanResult) -> dict:
             {
                 "tool": {
                     "driver": {
-                        "name": "mcpvet",
+                        "name": "mcphound",
                         "informationUri": _INFORMATION_URI,
                         "rules": list(rules.values()),
                     }
