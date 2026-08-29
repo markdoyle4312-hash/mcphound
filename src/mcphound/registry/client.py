@@ -64,12 +64,24 @@ def _fetch_page(base_url: str, cursor: str | None, limit: int) -> dict:
     return resp.json()
 
 
+def _parse_transport(transport: Any) -> str | None:
+    """Unwrap the registry's transport shape into a bare string.
+
+    Real API: `packages[].transport` is an object (e.g. `{"type": "stdio"}`),
+    an anyOf of StdioTransport/StreamableHttpTransport/SseTransport in the
+    official schema. Stay defensive in case some entries carry a bare string.
+    """
+    if isinstance(transport, dict):
+        return transport.get("type")
+    return transport
+
+
 def _parse_package(pkg: dict) -> RegistryPackage:
     return RegistryPackage(
         registry_type=pkg.get("registryType", ""),
         identifier=pkg.get("identifier", ""),
         version=pkg.get("version", ""),
-        transport=pkg.get("transport"),
+        transport=_parse_transport(pkg.get("transport")),
         file_sha256=pkg.get("fileSha256"),
         runtime_arguments=pkg.get("runtimeArguments"),
         package_arguments=pkg.get("packageArguments"),
@@ -88,20 +100,21 @@ def _parse_remote(remote: dict) -> RegistryRemote:
 
 def _parse_entry(entry: dict) -> RegistryServerEntry:
     meta = (entry.get("_meta") or {}).get("io.modelcontextprotocol.registry/official") or {}
-    repository = entry.get("repository") or {}
+    server = entry.get("server") or {}
+    repository = server.get("repository") or {}
     return RegistryServerEntry(
-        name=entry.get("name", ""),
-        version=entry.get("version", ""),
-        title=entry.get("title"),
-        description=entry.get("description"),
-        website_url=entry.get("websiteUrl"),
+        name=server.get("name", ""),
+        version=server.get("version", ""),
+        title=server.get("title"),
+        description=server.get("description"),
+        website_url=server.get("websiteUrl"),
         repository_url=repository.get("url"),
         repository_source=repository.get("source"),
         is_latest=bool(meta.get("isLatest", False)),
         status=meta.get("status"),
         published_at=meta.get("publishedAt"),
-        packages=[_parse_package(p) for p in entry.get("packages") or []],
-        remotes=[_parse_remote(r) for r in entry.get("remotes") or []],
+        packages=[_parse_package(p) for p in server.get("packages") or []],
+        remotes=[_parse_remote(r) for r in server.get("remotes") or []],
         raw=entry,
     )
 

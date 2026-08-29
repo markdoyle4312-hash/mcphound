@@ -5,20 +5,22 @@ from mcphound.registry import client
 _PAGE_1 = {
     "servers": [
         {
-            "name": "io.github.acme/tool",
-            "version": "1.0.0",
-            "description": "desc",
-            "repository": {"url": "https://github.com/acme/tool", "source": "github"},
-            "packages": [
-                {
-                    "registryType": "npm",
-                    "identifier": "@acme/tool",
-                    "version": "1.0.0",
-                    "transport": "stdio",
-                    "fileSha256": "abc123",
-                }
-            ],
-            "remotes": [],
+            "server": {
+                "name": "io.github.acme/tool",
+                "version": "1.0.0",
+                "description": "desc",
+                "repository": {"url": "https://github.com/acme/tool", "source": "github"},
+                "packages": [
+                    {
+                        "registryType": "npm",
+                        "identifier": "@acme/tool",
+                        "version": "1.0.0",
+                        "transport": {"type": "stdio"},
+                        "fileSha256": "abc123",
+                    }
+                ],
+                "remotes": [],
+            },
             "_meta": {
                 "io.modelcontextprotocol.registry/official": {
                     "isLatest": True,
@@ -34,20 +36,22 @@ _PAGE_1 = {
 _PAGE_1_WITH_CURSOR = {
     "servers": [
         {
-            "name": "io.github.acme/tool",
-            "version": "1.0.0",
-            "description": "desc",
-            "repository": {"url": "https://github.com/acme/tool", "source": "github"},
-            "packages": [
-                {
-                    "registryType": "npm",
-                    "identifier": "@acme/tool",
-                    "version": "1.0.0",
-                    "transport": "stdio",
-                    "fileSha256": "abc123",
-                }
-            ],
-            "remotes": [],
+            "server": {
+                "name": "io.github.acme/tool",
+                "version": "1.0.0",
+                "description": "desc",
+                "repository": {"url": "https://github.com/acme/tool", "source": "github"},
+                "packages": [
+                    {
+                        "registryType": "npm",
+                        "identifier": "@acme/tool",
+                        "version": "1.0.0",
+                        "transport": {"type": "stdio"},
+                        "fileSha256": "abc123",
+                    }
+                ],
+                "remotes": [],
+            },
             "_meta": {
                 "io.modelcontextprotocol.registry/official": {
                     "isLatest": True,
@@ -63,10 +67,12 @@ _PAGE_1_WITH_CURSOR = {
 _PAGE_2 = {
     "servers": [
         {
-            "name": "io.github.acme/other",
-            "version": "2.0.0",
-            "packages": [],
-            "remotes": [{"url": "https://mcp.acme.dev/mcp", "type": "streamable-http"}],
+            "server": {
+                "name": "io.github.acme/other",
+                "version": "2.0.0",
+                "packages": [],
+                "remotes": [{"url": "https://mcp.acme.dev/mcp", "type": "streamable-http"}],
+            },
             "_meta": {},
         }
     ],

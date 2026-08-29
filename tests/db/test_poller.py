@@ -7,20 +7,22 @@ from mcphound.registry.poller import run_poll
 _ENTRY_PAGE = {
     "servers": [
         {
-            "name": "io.github.acme/tool",
-            "version": "1.0.0",
-            "description": "desc",
-            "repository": {"url": "https://github.com/acme/tool", "source": "github"},
-            "packages": [
-                {
-                    "registryType": "npm",
-                    "identifier": "@acme/tool",
-                    "version": "1.0.0",
-                    "transport": "stdio",
-                    "fileSha256": "hash-v1",
-                }
-            ],
-            "remotes": [],
+            "server": {
+                "name": "io.github.acme/tool",
+                "version": "1.0.0",
+                "description": "desc",
+                "repository": {"url": "https://github.com/acme/tool", "source": "github"},
+                "packages": [
+                    {
+                        "registryType": "npm",
+                        "identifier": "@acme/tool",
+                        "version": "1.0.0",
+                        "transport": {"type": "stdio"},
+                        "fileSha256": "hash-v1",
+                    }
+                ],
+                "remotes": [],
+            },
             "_meta": {
                 "io.modelcontextprotocol.registry/official": {
                     "isLatest": True,
@@ -84,7 +86,15 @@ def test_run_poll_records_new_hash_on_change(monkeypatch, db_session_fixture):
         "servers": [
             {
                 **_ENTRY_PAGE["servers"][0],
-                "packages": [{**_ENTRY_PAGE["servers"][0]["packages"][0], "fileSha256": "hash-v2"}],
+                "server": {
+                    **_ENTRY_PAGE["servers"][0]["server"],
+                    "packages": [
+                        {
+                            **_ENTRY_PAGE["servers"][0]["server"]["packages"][0],
+                            "fileSha256": "hash-v2",
+                        }
+                    ],
+                },
             }
         ],
         "metadata": {"nextCursor": None},
