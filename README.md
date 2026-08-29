@@ -27,6 +27,11 @@ uvx mcphound scan      # scan auto-discovered configs
 # CI: fail on high/critical findings, emit SARIF
 mcphound scan .mcp.json --fail-on high --sarif -o mcphound.sarif
 
+# CI dry-run: report findings without failing the build — drop --fail-on
+# and the exit code stays 0 regardless of severity, so you can preview
+# what a policy would catch before you start enforcing it
+mcphound scan .mcp.json --json -o mcphound-preview.json
+
 # opt-in: also run network-dependent checks (npm registry provenance) — slower,
 # not fully deterministic offline, so it's off unless you ask for it
 mcphound scan --deep
