@@ -72,7 +72,7 @@ Bash
 #  first upload needs an account-scoped token)
 $env:UV_PUBLISH_TOKEN = "pypi-..."
 uv publish dist/*
-Then verify: uvx --from mcpvet mcpvet --help runs on a clean machine.
+Then verify: uvx mcphound --help runs on a clean machine.
 
 Future improvement (not v0.1): set up GitHub OIDC "Trusted Publisher" so
 tags publish automatically without long-lived tokens.
@@ -87,7 +87,7 @@ git push origin v0.1.0
 8. Launch (Roadmap W6 — same day if possible)
  Show HN: title like "Show HN: mcpvet – scan your Claude/Cursor MCP servers for supply-chain risks"
  Post to r/mcp, r/cybersecurity, r/ClaudeAI, r/ChatGPTCoding, X, LinkedIn
- Pin the install one-liner: uvx mcpvet scan
+ Pin the install one-liner: uvx mcphound scan
  Watch issues for 48h — the first false-positive report is a release-blocker patch.
 Rollback if something's wrong
 Broken release: yank it — uv publish --yank 0.1.0 dist/* (hides it from new installs; existing users keep working), fix, publish 0.1.1. Never reuse a version number.

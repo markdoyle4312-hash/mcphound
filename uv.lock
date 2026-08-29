@@ -155,7 +155,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mcp-vet"
+name = "mcphound"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

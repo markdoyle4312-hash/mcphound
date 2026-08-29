@@ -17,20 +17,21 @@ Local scanning is covered by [mcp-scan](https://github.com/invariantlabs-ai/mcp-
 ## Quickstart
 
 ```bash
-# published on PyPI as "mcp-vet" (the bare name "mcpvet" belongs to an
-# unrelated package) — the installed command is still "mcpvet"
-uvx --from mcp-vet mcpvet inspect   # inspect what you have (never executes a server)
-uvx --from mcp-vet mcpvet scan      # scan auto-discovered configs
+# published on PyPI as "mcphound" (mcpvet and mcp-vet were both already
+# taken/rejected) — mcphound is also installed as the "mcpvet" command,
+# kept as a back-compat alias
+uvx mcphound inspect   # inspect what you have (never executes a server)
+uvx mcphound scan      # scan auto-discovered configs
 
-# or install once and drop the --from:
-# pip install mcp-vet / uv tool install mcp-vet
+# or install once:
+# pip install mcphound / uv tool install mcphound
 
 # CI: fail on high/critical findings, emit SARIF
-mcpvet scan .mcp.json --fail-on high --sarif -o mcpvet.sarif
+mcphound scan .mcp.json --fail-on high --sarif -o mcphound.sarif
 
 # opt-in: also run network-dependent checks (npm registry provenance) — slower,
 # not fully deterministic offline, so it's off unless you ask for it
-mcpvet scan --deep
+mcphound scan --deep
 ```
 
 ## Development

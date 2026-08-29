@@ -1,5 +1,5 @@
 [project]
-name = "mcp-vet"
+name = "mcphound"
 version = "0.1.0"
 description = "Independent security scanner and reputation layer for MCP servers and agent skills"
 readme = "README.md"
@@ -40,7 +40,8 @@ dev = [
 ]
 
 [project.scripts]
-mcpvet = "mcpvet.cli:app"
+mcphound = "mcpvet.cli:app"
+mcpvet = "mcpvet.cli:app"  # back-compat alias from the pre-rename mcp-vet distribution
 
 [build-system]
 requires = ["hatchling"]

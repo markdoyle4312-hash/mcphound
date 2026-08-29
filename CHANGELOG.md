@@ -19,10 +19,11 @@ metadata. Every finding maps to an OWASP LLM Top 10 or Agentic/MCP Top 10
 code. Output is human-readable by default, or `--json` / `--sarif` for
 tooling and GitHub code scanning, with `--fail-on` exit codes for CI.
 
-Install and run (published on PyPI as `mcp-vet`; the CLI command is `mcpvet`):
+Install and run (published on PyPI as `mcphound`; `mcpvet` is kept as a
+back-compat command alias):
 
 ```bash
-uvx --from mcp-vet mcpvet scan
+uvx mcphound scan
 ```
 
 ### Detection rules
@@ -84,12 +85,15 @@ malicious fixture, a benign fixture (false-positive guard), and a pytest.
   registry poller will supersede it.
 - PyPI packages (`uvx`-launched) aren't covered by MCP-STATIC-007 yet, only
   npm/`npx`.
-- The PyPI *distribution name* is `mcp-vet`, not `mcpvet` — the `mcpvet`
-  name on PyPI belongs to an unrelated package (a pytest/eslint-based MCP
-  contract-testing tool). The importable module and CLI command are still
-  `mcpvet` (`pip install mcp-vet` gives you the `mcpvet` command), but a
-  bare `uvx mcpvet ...` will fetch the *other* project — always install
-  with `uvx --from mcp-vet mcpvet scan` (or `pip install mcp-vet` first).
+- The PyPI *distribution name* is `mcphound`, not `mcpvet`. `mcpvet` on
+  PyPI belongs to an unrelated package; `mcp-vet` was rejected by PyPI as
+  "too similar to an existing project" (its name-similarity check strips
+  hyphens/underscores before comparing, so `mcp-vet` collided with
+  `mcpvet`); `mcpaudit` belongs to a different, actively-maintained MCP
+  security scanner. The importable module and CLI command are still
+  `mcpvet` — `pip install mcphound` installs both the `mcphound` and
+  `mcpvet` commands (same entry point), so `uvx mcphound scan` and
+  `uvx --from mcphound mcpvet scan` both work.
 
 ### Dogfood / canary results
 - `mcpvet scan .mcp.json opencode.jsonc --fail-on high`: zero findings against
