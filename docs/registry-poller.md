@@ -44,6 +44,53 @@ it locally or on a machine you control.
 
 ## Schema
 
-See `docs/superpowers/specs/2026-08-29-registry-poller-design.md` for the full
-column-level schema and the reasoning behind it (why `hashes` is append-only,
-why `versions` is keyed the way it is, why delisting is soft).
+Five tables (`src/mcphound/db/models.py`), all timestamps `timestamptz`, every
+table with a surrogate bigserial `id` plus `created_at`/`updated_at` bookkeeping.
+
+**`servers`** — one row per registry entity, keyed on `name` (the registry's
+reverse-DNS id, e.g. `io.github.foo/bar-server`). Carries `title`,
+`description`, `website_url`, `repository_url`/`repository_source`, and a
+`raw_json` copy of the full server-level entry for forward-compat. `first_seen_at`
+is set once; `last_seen_at` is stamped on every run the server still appears in.
+
+**`versions`** — one row per **launchable artifact**: server × version ×
+(package-or-remote). A server publishing both an npm package and a hosted
+remote for the same version string gets two rows — this grain matches what a
+future scan would actually check (one row = one thing that could be launched
+and inspected), not the registry's own per-server-version grouping. Unique key:
+`(server_id, version, registry_type, identifier)`. `registry_type` is
+`npm`/`pypi`/`cargo`/`oci`/`nuget`/`mcpb`/`remote`; `identifier` is the package
+name, or the remote URL when `registry_type='remote'`. `runtime_arguments`,
+`package_arguments`, `environment_variables` are stored as raw `jsonb` — W12-13's
+scanning pipeline needs these to reconstruct a launch command, not a
+lossy-flattened version.
+
+**`hashes`** — an **append-only observation log**, not a 1:1 mirror of the
+registry's `fileSha256`. The poller only inserts a row when a version's hash
+differs from the last one on file for that version (`_maybe_insert_hash` in
+`src/mcphound/registry/poller.py`). This is deliberate: it's the ledger the
+v1.5 roadmap item ("description-hash drift alerts") needs — the same version
+string suddenly resolving to a different hash than last observed is a rug-pull
+signal. Nothing consumes that signal yet, but the data has to start
+accumulating now to be useful later. Indexed on `(version_id, observed_at)`
+for "latest hash for this version" reads.
+
+**`scans` / `findings`** — created now, populated by W12-13, not this poller.
+`scans` holds `version_id`, `scanned_at`, `mcphound_version`, `deep`, `status`;
+`findings` mirrors every field on `mcphound.models.Finding` (`rule_id`,
+`title`, `severity`, `confidence`, `owasp`, `phase`, `detail`,
+`recommendation`) so DB rows and CLI JSON output never diverge in shape.
+
+**Delisting is soft, not a `DELETE`.** Each run stamps `last_seen_at` on
+everything it touches, then mark-and-sweeps: anything with `last_seen_at`
+older than the run's start gets `delisted_at` set (and cleared again if it
+reappears in a later run). A taken-down malicious server's history is exactly
+what mcphound's mission wants kept — a hard delete would erase the evidence.
+
+**Why a full re-page every run, not a delta fetch:** the registry API
+(`GET /v0.1/servers`, cursor-paginated via `cursor`/`limit` and
+`metadata.nextCursor`) has no delta, webhook, or `since` mechanism as of
+2026-08-29 — a poller has no cheaper option than walking the entire registry
+and diffing locally against `last_seen_at`. Upserts use Postgres
+`INSERT ... ON CONFLICT DO UPDATE`, so this scales with registry size rather
+than requiring an in-memory diff against the whole existing table.

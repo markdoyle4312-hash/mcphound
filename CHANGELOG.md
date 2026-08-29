@@ -24,7 +24,7 @@ New: SQLAlchemy 2.0 + Alembic under `src/mcphound/db/` (new optional
 `registry` extra — kept out of the core install so `pip install mcphound`
 stays lightweight for scanner-only use), `docker-compose.yml` for local
 Postgres, a `db-tests` CI job running against a real Postgres service
-container (not mocks — see `docs/superpowers/specs/2026-08-29-registry-poller-design.md`).
+container (not mocks — see `docs/registry-poller.md` for the schema rationale).
 See `docs/registry-poller.md` for local setup and nightly-scheduling docs
 (cron/Task Scheduler — no custom scheduling logic was built).
 

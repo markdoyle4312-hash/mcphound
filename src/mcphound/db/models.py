@@ -1,6 +1,6 @@
 """SQLAlchemy declarative models for the registry poller's Postgres schema.
 
-Table grain notes (see docs/superpowers/specs/2026-08-29-registry-poller-design.md):
+Table grain notes (see docs/registry-poller.md for the full rationale):
 - `versions` is one row per server x version x (package-or-remote) — a server
   publishing both an npm package and a hosted remote for the same version gets
   two rows.

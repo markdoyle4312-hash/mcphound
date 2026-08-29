@@ -2,7 +2,7 @@
 
 PARSING ONLY — never executes a discovered server. The registry has no delta/
 webhook mechanism, so a full page-through is required on every poll; see
-docs/superpowers/specs/2026-08-29-registry-poller-design.md.
+docs/registry-poller.md.
 """
 
 from __future__ import annotations
