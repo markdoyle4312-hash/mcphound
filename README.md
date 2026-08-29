@@ -2,7 +2,7 @@
 
 Independent security scanner and reputation layer for MCP servers and agent skills.
 
-> Status: **pre-launch.** v0.1 = static CLI scanning. Reputation site/API and the GitHub Action follow per [ROADMAP.md](ROADMAP.md).
+> Status: **v0.1 published** ([PyPI](https://pypi.org/project/mcphound/)) — static CLI scanning. Reputation site/API and the GitHub Action are next; see [ROADMAP.md](ROADMAP.md).
 
 mcphound discovers the MCP servers configured in your AI coding clients (Claude Code/Desktop, Cursor, Windsurf, Gemini CLI, OpenCode) and checks them for supply-chain risks: hardcoded secrets, download-and-execute launch commands, over-broad permissions, pinned-version drift, and (in later versions) tool-description poisoning, typosquats, and runtime rug-pulls. Findings map to the OWASP Top 10 for LLM and Agentic applications and can be exported as SARIF into GitHub code scanning.
 
