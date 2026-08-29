@@ -6,6 +6,23 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### W9 community rules process
+
+GOVERNANCE.md's "Contributing rules" section was three bullet points marked
+"working notes — expand before v0.1 launch." Expanded it into an actual process:
+how to propose a rule (issue first, using a new template), the non-negotiable
+4-artifact PR bar, what a review actually checks (OWASP mapping, a genuinely
+close-call benign fixture, no new false positives against the `tests/fp_sweep/`
+real-world corpus, network calls marked+gated, no duplicate coverage, justified
+severity/confidence), and a plain "best-effort, no SLA" turnaround note since
+this is solo-maintained. Added `.github/PULL_REQUEST_TEMPLATE.md` (checklist
+mirrors the process doc) and `.github/ISSUE_TEMPLATE/new-rule-proposal.md`.
+
+The other half of W9's roadmap line — "bugfixes from launch feedback, first
+external PRs" — doesn't apply yet: W6 (the actual launch post) hasn't happened,
+so there's no real feedback or external PRs to act on. Left that part of the
+roadmap line unstruck rather than fabricating activity that hasn't occurred.
+
 ### W8 docs pass + dogfood command
 
 - **`docs/rules.md`** — a generated rule catalog (ID, title, severity, confidence,
