@@ -15,6 +15,7 @@ sandbox/work/
 .DS_Store
 node_modules/
 .claude/settings.json
+.worktrees/
 
 # private planning docs — never commit, see ROADMAP.md for the public roadmap
 mcp-security-tool-build-plan.md
