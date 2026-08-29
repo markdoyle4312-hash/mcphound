@@ -16,3 +16,7 @@ sandbox/work/
 node_modules/
 .claude/settings.json
 
+# private planning docs — never commit, see ROADMAP.md for the public roadmap
+mcp-security-tool-build-plan.md
+LAUNCH_POST.md
+
