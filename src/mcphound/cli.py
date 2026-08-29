@@ -20,23 +20,28 @@ app = typer.Typer(
 )
 
 
-def _collect(paths: list[Path] | None, deep: bool = False) -> ScanResult:
+def _collect(paths: list[Path] | None, deep: bool = False) -> tuple[ScanResult, list[Path]]:
+    explicit = paths is not None
     config_paths = paths or discover_configs()
     servers = []
+    missing: list[Path] = []
     for p in config_paths:
         if p.exists():
             servers.extend(load_servers(p))
+        elif explicit:
+            missing.append(p)
     rules = load_rules()
     if not deep:
         rules = [r for r in rules if not r.get("network")]
     findings = []
     for server in servers:
         findings.extend(evaluate(server, rules))
-    return ScanResult(
+    result = ScanResult(
         targets=[str(p) for p in config_paths],
         servers=servers,
         findings=findings,
     )
+    return result, missing
 
 
 @app.command()
@@ -46,12 +51,17 @@ def inspect(
     ] = None,
 ):
     """List configured MCP servers WITHOUT executing them."""
-    paths = [config] if config else discover_configs()
-    existing = [p for p in paths if p.exists()]
-    if not existing:
+    if config is not None:
+        if not config.exists():
+            typer.echo(f"Warning: config file not found: {config}", err=True)
+            raise typer.Exit(1)
+        paths = [config]
+    else:
+        paths = discover_configs()
+    if not paths:
         typer.echo("No MCP configurations found.")
         raise typer.Exit(0)
-    for p in existing:
+    for p in paths:
         typer.echo(f"\n# {p}")
         for s in load_servers(p):
             detail = s.url if s.transport == "http" else " ".join(s.command)
@@ -85,7 +95,10 @@ def scan(
     ] = None,
 ):
     """Scan MCP configurations for security issues (static analysis only)."""
-    result = _collect(config, deep=deep)
+    result, missing = _collect(config, deep=deep)
+
+    for p in missing:
+        typer.echo(f"Warning: config file not found: {p}", err=True)
 
     if sarif:
         text = json.dumps(to_sarif(result), indent=2)
@@ -106,9 +119,11 @@ def scan(
     else:
         typer.echo(text)
 
-    if fail_on and fail_on in SEVERITY_ORDER:
-        if any(SEVERITY_ORDER[f.severity] >= SEVERITY_ORDER[fail_on] for f in result.findings):
-            raise typer.Exit(1)
+    severity_exceeded = fail_on and fail_on in SEVERITY_ORDER and any(
+        SEVERITY_ORDER[f.severity] >= SEVERITY_ORDER[fail_on] for f in result.findings
+    )
+    if missing or severity_exceeded:
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

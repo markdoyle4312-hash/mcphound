@@ -1,8 +1,17 @@
 # Changelog
 
-All notable changes to mcpvet are documented here. Format loosely follows
+All notable changes to mcphound are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); this project doesn't use
 SemVer strictly pre-1.0 (see ROADMAP.md).
+
+## [Unreleased]
+
+### Fixed
+- `scan`/`inspect` silently ignored an explicitly-passed config file that
+  didn't exist, exiting 0 as if nothing were wrong. They now print a
+  warning to stderr and exit 1 when an explicit path is missing.
+  Auto-discovery finding no configs is unchanged — that's an expected,
+  silent (exit 0) outcome, not an error.
 
 ## [0.1.0] — 2026-08-29
 

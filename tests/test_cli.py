@@ -16,9 +16,22 @@ def test_inspect_lists_servers_without_executing():
     assert "stdio" in result.stdout
 
 
-def test_inspect_skips_missing_config():
+def test_inspect_errors_on_explicit_missing_config():
     runner = CliRunner()
-    result = runner.invoke(app, ["inspect", str(FIXTURES / "configs" / "does_not_exist.json")])
+    missing = FIXTURES / "configs" / "does_not_exist.json"
+    result = runner.invoke(app, ["inspect", str(missing)])
+    assert result.exit_code != 0
+    assert "not found" in result.output
+    assert str(missing) in result.output
+
+
+def test_inspect_auto_discovery_finds_nothing_stays_silent(tmp_path, monkeypatch):
+    from mcphound.discovery import clients as discovery_clients
+
+    monkeypatch.setattr(discovery_clients, "HOME", tmp_path / "home")
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(app, ["inspect"])
     assert result.exit_code == 0
     assert "No MCP configurations found." in result.stdout
 
@@ -32,6 +45,26 @@ def test_scan_output_flag_writes_to_file(tmp_path):
     assert result.stdout == ""
     data = json.loads(out.read_text())
     assert data["findings"]
+
+
+def test_scan_errors_on_explicit_missing_config():
+    runner = CliRunner()
+    missing = FIXTURES / "configs" / "does_not_exist.json"
+    result = runner.invoke(app, ["scan", str(missing)])
+    assert result.exit_code != 0
+    assert "not found" in result.output
+    assert str(missing) in result.output
+
+
+def test_scan_auto_discovery_finds_nothing_stays_silent(tmp_path, monkeypatch):
+    from mcphound.discovery import clients as discovery_clients
+
+    monkeypatch.setattr(discovery_clients, "HOME", tmp_path / "home")
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(app, ["scan"])
+    assert result.exit_code == 0
+    assert "No findings." in result.stdout
 
 
 def _finding_rule_ids(stdout: str) -> set[str]:
