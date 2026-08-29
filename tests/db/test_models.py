@@ -9,7 +9,9 @@ def test_all_five_tables_are_registered():
 def test_versions_natural_key_constraint_columns():
     versions_table = Base.metadata.tables["versions"]
     constraint = next(
-        c for c in versions_table.constraints if getattr(c, "name", None) == "uq_versions_natural_key"
+        c
+        for c in versions_table.constraints
+        if getattr(c, "name", None) == "uq_versions_natural_key"
     )
     assert {col.name for col in constraint.columns} == {
         "server_id",

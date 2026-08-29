@@ -5,17 +5,18 @@ Revises:
 Create Date: 2026-08-29 20:45:42.929359
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision: str = '693835be0e9e'
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -33,8 +34,12 @@ def upgrade() -> None:
     sa.Column('first_seen_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('last_seen_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('delisted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column(
+        'created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False
+    ),
+    sa.Column(
+        'updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False
+    ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
@@ -55,26 +60,38 @@ def upgrade() -> None:
     sa.Column('first_seen_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('last_seen_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('delisted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column(
+        'created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False
+    ),
+    sa.Column(
+        'updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False
+    ),
     sa.ForeignKeyConstraint(['server_id'], ['servers.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('server_id', 'version', 'registry_type', 'identifier', name='uq_versions_natural_key')
+    sa.UniqueConstraint(
+        'server_id', 'version', 'registry_type', 'identifier', name='uq_versions_natural_key'
+    )
     )
     op.create_table('hashes',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('version_id', sa.BigInteger(), nullable=False),
     sa.Column('sha256', sa.String(), nullable=False),
     sa.Column('source', sa.String(), server_default='registry', nullable=False),
-    sa.Column('observed_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column(
+        'observed_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False
+    ),
     sa.ForeignKeyConstraint(['version_id'], ['versions.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('ix_hashes_version_observed', 'hashes', ['version_id', 'observed_at'], unique=False)
+    op.create_index(
+        'ix_hashes_version_observed', 'hashes', ['version_id', 'observed_at'], unique=False
+    )
     op.create_table('scans',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('version_id', sa.BigInteger(), nullable=False),
-    sa.Column('scanned_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column(
+        'scanned_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False
+    ),
     sa.Column('mcphound_version', sa.String(), nullable=False),
     sa.Column('deep', sa.Boolean(), nullable=False),
     sa.Column('status', sa.String(), nullable=False),
