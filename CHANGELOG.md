@@ -6,6 +6,15 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### fix: registry poller now retries transient network errors
+
+The first real run of `nightly-registry-scan` in CI died 35 minutes in with
+`httpx.ReadTimeout` on one page of a ~250-page walk — `_fetch_page` in
+`src/mcphound/registry/client.py` had no retry logic, so a single blip lost
+all prior progress. It now retries timeouts/transport errors and 5xx
+responses with exponential backoff (up to 5 attempts); 4xx errors still
+raise immediately.
+
 ### W14 site now deploys nightly
 
 `nightly-registry-scan` (`.github/workflows/nightly.yml`) is live: it polls

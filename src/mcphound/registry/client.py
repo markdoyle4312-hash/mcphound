@@ -7,6 +7,7 @@ docs/registry-poller.md.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
@@ -15,6 +16,8 @@ import httpx
 
 DEFAULT_PAGE_LIMIT = 100
 _TIMEOUT = 15.0
+_MAX_ATTEMPTS = 5
+_RETRY_BACKOFF_SECONDS = 2.0
 
 
 @dataclass
@@ -61,13 +64,35 @@ def _fetch_page(base_url: str, cursor: str | None, limit: int) -> dict:
     version) instead of every version ever published — the full-history walk
     was pulling ~3x the entry count for rows `registry-scan` never looks at
     (it only scans `is_latest=True` versions). Confirmed against the live
-    OpenAPI spec (https://registry.modelcontextprotocol.io/openapi.yaml)."""
+    OpenAPI spec (https://registry.modelcontextprotocol.io/openapi.yaml).
+
+    Retries transient network/server errors with backoff: a full poll makes
+    hundreds of sequential page requests (~25k servers / page_limit), so a
+    single isolated timeout otherwise loses 30+ minutes of prior progress —
+    this bit a real nightly CI run (2026-08-30) via httpx.ReadTimeout on one
+    page deep into the walk. Client errors (4xx) aren't retried — retrying a
+    bad request forever would just waste the backoff budget.
+    """
     params: dict[str, Any] = {"limit": limit, "version": "latest"}
     if cursor:
         params["cursor"] = cursor
-    resp = httpx.get(f"{base_url.rstrip('/')}/v0.1/servers", params=params, timeout=_TIMEOUT)
-    resp.raise_for_status()
-    return resp.json()
+    url = f"{base_url.rstrip('/')}/v0.1/servers"
+
+    last_exc: Exception = RuntimeError("unreachable")
+    for attempt in range(_MAX_ATTEMPTS):
+        try:
+            resp = httpx.get(url, params=params, timeout=_TIMEOUT)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code < 500:
+                raise
+            last_exc = exc
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            last_exc = exc
+        if attempt < _MAX_ATTEMPTS - 1:
+            time.sleep(_RETRY_BACKOFF_SECONDS * (2**attempt))
+    raise last_exc
 
 
 def _parse_transport(transport: Any) -> str | None:
