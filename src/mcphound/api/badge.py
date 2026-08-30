@@ -20,7 +20,8 @@ def render_badge(score: int) -> str:
     label_width = 62
     value_width = 34
     total_width = label_width + value_width
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" role="img" aria-label="{label}: {value}">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" \
+role="img" aria-label="{label}: {value}">
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
