@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
@@ -27,6 +28,14 @@ app = typer.Typer(
 )
 
 FEEDBACK_REPO = "markdoyle4312-hash/mcphound"
+
+
+def _enable_progress_logging() -> None:
+    """registry-poll/registry-scan are long-running, network-bound batch jobs
+    with no other console feedback — surface their INFO progress logs.
+    Scoped to these commands only: `scan`/`inspect` must stay silent by
+    default so --json/--sarif output stays deterministic (CLAUDE.md)."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 def _collect(
@@ -208,6 +217,7 @@ def registry_poll(
     ] = False,
 ):
     """Poll the official MCP Registry and upsert servers/versions/hashes into Postgres."""
+    _enable_progress_logging()
     cfg = load_config(config_path)
     session = get_session_factory()()
     try:
@@ -244,6 +254,7 @@ def registry_scan(
 ):
     """Batch-scan every currently-listed registry server, score it 0-100, and
     write JSON artifacts. Run after `registry-poll` has populated the DB."""
+    _enable_progress_logging()
     cfg = load_config(config_path)
     rules = load_rules()
     out_dir = out or Path(cfg.artifacts_dir)

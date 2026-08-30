@@ -8,6 +8,7 @@ CLI layer decides whether a run is real or --dry-run.
 from __future__ import annotations
 
 import datetime as dt
+import logging
 from dataclasses import dataclass
 
 from sqlalchemy import select, update
@@ -16,6 +17,10 @@ from sqlalchemy.orm import Session
 
 from ..db.models import Hash, Server, Version
 from .client import RegistryServerEntry, iter_servers
+
+logger = logging.getLogger(__name__)
+
+_POLL_PROGRESS_INTERVAL = 100
 
 
 @dataclass
@@ -199,6 +204,8 @@ def run_poll(session: Session, base_url: str, page_limit: int) -> PollSummary:
 
     for entry in iter_servers(base_url, page_limit):
         server_id = _upsert_server(session, entry, run_started_at, summary)
+        if summary.servers_seen % _POLL_PROGRESS_INTERVAL == 0:
+            logger.info("registry-poll: %d server(s) processed so far", summary.servers_seen)
         for pkg in entry.packages:
             version_id = _upsert_version(
                 session,

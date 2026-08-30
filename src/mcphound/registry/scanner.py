@@ -22,6 +22,8 @@ from .scoring import dedupe_by_rule_id, score_server
 
 logger = logging.getLogger(__name__)
 
+_SCAN_PROGRESS_INTERVAL = 25
+
 
 @dataclass
 class ScanSummary:
@@ -96,23 +98,35 @@ def _write_scan(session: Session, version_id: int, mcphound_version: str, findin
 def run_scan(session: Session, rules: list[dict], mcphound_version: str) -> ScanSummary:
     """No --deep filtering here (unlike the local `scan` command) — network-
     dependent rules (npm provenance) always run in the registry pipeline."""
+    versions = _in_scope_versions(session)
+    total = len(versions)
+    logger.info("registry-scan: %d version(s) in scope", total)
     summary = ScanSummary()
-    for version in _in_scope_versions(session):
+    for version in versions:
         summary.versions_seen += 1
         if not _needs_rescan(session, version, mcphound_version):
             summary.versions_skipped += 1
-            continue
-        try:
-            server_config = version_to_server_config(version)
-            findings = evaluate(server_config, rules)
-        except Exception:
-            logger.exception("registry-scan: failed to scan version_id=%s", version.id)
-            _write_scan(session, version.id, mcphound_version, [], status="error")
-            summary.versions_errored += 1
-            continue
-        _write_scan(session, version.id, mcphound_version, findings, status="ok")
-        summary.versions_scanned += 1
-        summary.findings_written += len(findings)
+        else:
+            try:
+                server_config = version_to_server_config(version)
+                findings = evaluate(server_config, rules)
+            except Exception:
+                logger.exception("registry-scan: failed to scan version_id=%s", version.id)
+                _write_scan(session, version.id, mcphound_version, [], status="error")
+                summary.versions_errored += 1
+            else:
+                _write_scan(session, version.id, mcphound_version, findings, status="ok")
+                summary.versions_scanned += 1
+                summary.findings_written += len(findings)
+        if summary.versions_seen % _SCAN_PROGRESS_INTERVAL == 0 or summary.versions_seen == total:
+            logger.info(
+                "registry-scan: %d/%d versions processed (%d scanned, %d skipped, %d errored)",
+                summary.versions_seen,
+                total,
+                summary.versions_scanned,
+                summary.versions_skipped,
+                summary.versions_errored,
+            )
     session.flush()
     return summary
 
