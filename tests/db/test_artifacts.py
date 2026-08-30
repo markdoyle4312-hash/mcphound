@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 
 from mcphound import __version__
-from mcphound.registry.artifacts import write_artifacts
+from mcphound.registry.artifacts import (
+    write_all_artifacts,
+    write_artifacts,
+    write_typosquat_clusters,
+)
 from mcphound.registry.scanner import run_scan, run_scoring
 from mcphound.rules.loader import load_rules
 
@@ -88,3 +92,72 @@ def test_write_artifacts_escapes_slashes_in_server_names(
     assert (tmp_path / "servers" / "io.github.acme__weird_name_.json").exists()
     index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
     assert index[0]["slug"] == "io.github.acme__weird_name_"
+
+
+def test_write_typosquat_clusters_finds_near_miss_packages(
+    db_session_fixture, seed_version, tmp_path
+):
+    seed_version(
+        server_name="io.github.acme/lookalike",
+        registry_type="npm",
+        identifier="@modelcontextprotocol/server-filesystemx",
+    )
+    run_scan(db_session_fixture, RULES, __version__)
+    run_scoring(db_session_fixture, __version__)
+    write_artifacts(db_session_fixture, tmp_path)
+
+    write_typosquat_clusters(db_session_fixture, tmp_path, RULES)
+
+    clusters = json.loads((tmp_path / "typosquat-clusters.json").read_text(encoding="utf-8"))
+    entry = next(
+        c for c in clusters if c["known_name"] == "@modelcontextprotocol/server-filesystem"
+    )
+    assert entry["known_slug"] == "@modelcontextprotocol__server-filesystem"
+    assert entry["neighbors"] == [
+        {
+            "identifier": "@modelcontextprotocol/server-filesystemx",
+            "distance": 1,
+            "server_name": "io.github.acme/lookalike",
+            "server_slug": "io.github.acme__lookalike",
+        }
+    ]
+
+
+def test_write_typosquat_clusters_excludes_exact_matches(
+    db_session_fixture, seed_version, tmp_path
+):
+    seed_version(
+        server_name="io.github.acme/exact",
+        registry_type="npm",
+        identifier="@modelcontextprotocol/server-filesystem",
+    )
+
+    write_typosquat_clusters(db_session_fixture, tmp_path, RULES)
+
+    clusters = json.loads((tmp_path / "typosquat-clusters.json").read_text(encoding="utf-8"))
+    entry = next(
+        c for c in clusters if c["known_name"] == "@modelcontextprotocol/server-filesystem"
+    )
+    assert entry["neighbors"] == []
+
+
+def test_write_typosquat_clusters_covers_every_known_name(db_session_fixture, tmp_path):
+    write_typosquat_clusters(db_session_fixture, tmp_path, RULES)
+
+    clusters = json.loads((tmp_path / "typosquat-clusters.json").read_text(encoding="utf-8"))
+    known_names = {c["known_name"] for c in clusters}
+    assert "@modelcontextprotocol/server-filesystem" in known_names
+    assert all(c["neighbors"] == [] for c in clusters)
+
+
+def test_write_all_artifacts_writes_both_files(db_session_fixture, seed_version, tmp_path):
+    seed_version()
+    run_scan(db_session_fixture, RULES, __version__)
+    run_scoring(db_session_fixture, __version__)
+
+    written, clustered = write_all_artifacts(db_session_fixture, tmp_path, RULES)
+
+    assert written == 1
+    assert clustered == 0
+    assert (tmp_path / "index.json").exists()
+    assert (tmp_path / "typosquat-clusters.json").exists()

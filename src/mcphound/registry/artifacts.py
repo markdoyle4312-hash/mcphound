@@ -11,20 +11,29 @@ import re
 from pathlib import Path
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..db.models import Finding as FindingRow
 from ..db.models import Scan, Server, ServerScore, Version
+from ..rules.typosquat import (
+    extract_command_package,
+    load_reference_list,
+    neighbors_of,
+    typosquat_rule_config,
+)
+from .adapter import version_to_server_config
 
 logger = logging.getLogger(__name__)
 
-_UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_.-]")
+_UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_.@-]")
 
 
 def escape_name_component(name: str) -> str:
     """Escape one registry name into filesystem-/URL-slug-safe form: '/'
     becomes '__' (so it reads as a name segment, not a path separator),
-    everything else outside [A-Za-z0-9_.-] becomes '_'."""
+    everything else outside [A-Za-z0-9_.@-] becomes '_'. '@' is kept as-is
+    since it's also reused for npm-scoped typosquat known-names
+    (e.g. "@modelcontextprotocol/server-filesystem")."""
     escaped = name.replace("/", "__")
     return _UNSAFE_NAME_CHARS.sub("_", escaped)
 
@@ -149,3 +158,79 @@ def write_artifacts(session: Session, out_dir: Path) -> int:
         written += 1
     (out_dir / "index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
     return written
+
+
+def _candidate_packages(session: Session) -> list[tuple[str, str]]:
+    """(server_name, package) for every current version whose launch command
+    names an npm/pypi package the typosquat rule can compare — i.e. exactly
+    the packages MCP-STATIC-006 would evaluate for that version."""
+    versions = (
+        session.execute(
+            select(Version)
+            .options(selectinload(Version.server))
+            .where(Version.is_latest.is_(True), Version.delisted_at.is_(None))
+        )
+        .scalars()
+        .all()
+    )
+    candidates: list[tuple[str, str]] = []
+    for version in versions:
+        pkg = extract_command_package(version_to_server_config(version))
+        if pkg:
+            candidates.append((version.server.name, pkg))
+    return candidates
+
+
+def write_typosquat_clusters(session: Session, out_dir: Path, rules: list[dict]) -> int:
+    """Writes artifacts/typosquat-clusters.json: for every known-legitimate
+    package name MCP-STATIC-006 compares against, every currently-listed
+    registry package within its edit-distance threshold (excluding an exact
+    match). Should run after write_artifacts() in the same out_dir — reads
+    back index.json to attach each neighbor's site slug (None if that
+    server has no score yet). Returns how many known names have at least
+    one neighbor."""
+    rule_config = typosquat_rule_config(rules)
+    clusters: list[dict] = []
+    clustered_count = 0
+    if rule_config is not None:
+        reference_list, max_distance = rule_config
+        reference = load_reference_list(reference_list)
+        candidates = _candidate_packages(session)
+        pkg_to_server = {pkg: server_name for server_name, pkg in candidates}
+        name_to_slug: dict[str, str] = {}
+        index_path = out_dir / "index.json"
+        if index_path.exists():
+            rows = json.loads(index_path.read_text(encoding="utf-8"))
+            name_to_slug = {row["name"]: row["slug"] for row in rows}
+        for known_name in reference:
+            neighbors = neighbors_of(known_name, pkg_to_server.keys(), max_distance)
+            if neighbors:
+                clustered_count += 1
+            clusters.append(
+                {
+                    "known_name": known_name,
+                    "known_slug": escape_name_component(known_name),
+                    "neighbors": [
+                        {
+                            "identifier": pkg,
+                            "distance": distance,
+                            "server_name": pkg_to_server[pkg],
+                            "server_slug": name_to_slug.get(pkg_to_server[pkg]),
+                        }
+                        for pkg, distance in neighbors
+                    ],
+                }
+            )
+    (out_dir / "typosquat-clusters.json").write_text(
+        json.dumps(clusters, indent=2), encoding="utf-8"
+    )
+    return clustered_count
+
+
+def write_all_artifacts(session: Session, out_dir: Path, rules: list[dict]) -> tuple[int, int]:
+    """Runs the full artifact export: per-server files + leaderboard index,
+    then typosquat clusters (which depend on index.json's slugs). Returns
+    (servers_written, known_names_with_a_cluster)."""
+    written = write_artifacts(session, out_dir)
+    clustered = write_typosquat_clusters(session, out_dir, rules)
+    return written, clustered
