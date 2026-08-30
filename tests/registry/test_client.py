@@ -127,3 +127,24 @@ def test_iter_servers_stops_on_single_page(monkeypatch):
 
     monkeypatch.setattr(client, "_fetch_page", fake_fetch)
     assert list(client.iter_servers("https://registry.example")) == []
+
+
+def test_fetch_page_filters_to_latest_version(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"servers": [], "metadata": {}}
+
+    def fake_get(url, params, timeout):
+        captured["params"] = params
+        return FakeResponse()
+
+    monkeypatch.setattr(client.httpx, "get", fake_get)
+
+    client._fetch_page("https://registry.example", None, 50)
+
+    assert captured["params"]["version"] == "latest"

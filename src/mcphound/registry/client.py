@@ -55,8 +55,14 @@ class RegistryServerEntry:
 
 
 def _fetch_page(base_url: str, cursor: str | None, limit: int) -> dict:
-    """Isolated so tests can monkeypatch it instead of hitting the real registry."""
-    params: dict[str, Any] = {"limit": limit}
+    """Isolated so tests can monkeypatch it instead of hitting the real registry.
+
+    `version=latest` filters the response to one entry per server (the current
+    version) instead of every version ever published — the full-history walk
+    was pulling ~3x the entry count for rows `registry-scan` never looks at
+    (it only scans `is_latest=True` versions). Confirmed against the live
+    OpenAPI spec (https://registry.modelcontextprotocol.io/openapi.yaml)."""
+    params: dict[str, Any] = {"limit": limit, "version": "latest"}
     if cursor:
         params["cursor"] = cursor
     resp = httpx.get(f"{base_url.rstrip('/')}/v0.1/servers", params=params, timeout=_TIMEOUT)

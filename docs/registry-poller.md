@@ -129,8 +129,25 @@ what mcphound's mission wants kept — a hard delete would erase the evidence.
 
 **Why a full re-page every run, not a delta fetch:** the registry API
 (`GET /v0.1/servers`, cursor-paginated via `cursor`/`limit` and
-`metadata.nextCursor`) has no delta, webhook, or `since` mechanism as of
-2026-08-29 — a poller has no cheaper option than walking the entire registry
-and diffing locally against `last_seen_at`. Upserts use Postgres
-`INSERT ... ON CONFLICT DO UPDATE`, so this scales with registry size rather
-than requiring an in-memory diff against the whole existing table.
+`metadata.nextCursor`) has no webhook mechanism — a poller has no cheaper
+option than walking the whole (filtered) listing each run and diffing
+locally against `last_seen_at`. Upserts use Postgres `INSERT ... ON CONFLICT
+DO UPDATE`, so this scales with registry size rather than requiring an
+in-memory diff against the whole existing table.
+
+**`version=latest` filter (added 2026-08-30):** without it, `/v0.1/servers`
+returns one row per *published version* of every server — for the live
+registry that's roughly 85,000 rows for ~25,000 actually-current servers,
+since old superseded versions stay listed. `registry-scan` only ever reads
+`is_latest=True` rows (`scanner.py::_in_scope_versions`), so the un-filtered
+~3x volume was pure waste on every run — more HTTP page-fetches, more DB
+upserts, no additional coverage. `client.py::_fetch_page` now always sends
+`version=latest`. One consequence: mcphound no longer bulk-ingests
+already-superseded version rows on each poll; it still accumulates each
+server's version history over time naturally (a new "latest" lands as a new
+row on the run after it's published), just not the full backlog on day one.
+
+The API also exposes `updated_since` (an RFC3339 delta filter) per its
+OpenAPI spec, which the original "no delta mechanism" note above was wrong
+about — the poller doesn't use it yet. That's a separate future optimization
+(swapping the full walk for an incremental one), not part of this fix.
