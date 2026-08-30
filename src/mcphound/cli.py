@@ -11,16 +11,42 @@ from urllib.parse import quote
 import typer
 
 from . import __version__
-from .db.session import get_session_factory
 from .discovery.clients import discover_configs, load_servers
 from .models import SEVERITY_ORDER, ScanResult
 from .output import to_json, to_sarif
-from .registry.artifacts import write_all_artifacts
 from .registry.config import load_config
-from .registry.poller import run_poll
-from .registry.scanner import run_scan, run_scoring
 from .rules.engine import evaluate
 from .rules.loader import load_rules
+
+# `scan`/`inspect`/`feedback` must work with just the base install (no
+# sqlalchemy/psycopg) — CHANGELOG.md: "kept out of the core install so
+# `pip install mcphound` stays lightweight for scanner-only use". The
+# registry-* commands need the `registry` extra, so their sqlalchemy-backed
+# imports are guarded here rather than required at module scope; each
+# registry-* command checks for None and raises a clear error instead of a
+# raw ModuleNotFoundError traceback.
+try:
+    from .db.session import get_session_factory
+    from .registry.artifacts import write_all_artifacts
+    from .registry.poller import run_poll
+    from .registry.scanner import run_scan, run_scoring
+except ImportError:
+    get_session_factory = None
+    write_all_artifacts = None
+    run_poll = None
+    run_scan = None
+    run_scoring = None
+
+
+def _require_registry_extra() -> None:
+    if get_session_factory is None:
+        typer.echo(
+            "Error: this command needs the 'registry' extra "
+            "(pip install 'mcphound[registry]' / uv sync --extra registry).",
+            err=True,
+        )
+        raise typer.Exit(1)
+
 
 app = typer.Typer(
     add_completion=False,
@@ -217,6 +243,7 @@ def registry_poll(
     ] = False,
 ):
     """Poll the official MCP Registry and upsert servers/versions/hashes into Postgres."""
+    _require_registry_extra()
     _enable_progress_logging()
     cfg = load_config(config_path)
     session = get_session_factory()()
@@ -254,6 +281,7 @@ def registry_scan(
 ):
     """Batch-scan every currently-listed registry server, score it 0-100, and
     write JSON artifacts. Run after `registry-poll` has populated the DB."""
+    _require_registry_extra()
     _enable_progress_logging()
     cfg = load_config(config_path)
     rules = load_rules()
@@ -297,6 +325,7 @@ def registry_export(
     typosquat clusters) from already-scored DB state, without rescanning.
     Cheap enough to run before every site deploy; run `registry-scan` on
     its own schedule to actually update scores."""
+    _require_registry_extra()
     cfg = load_config(config_path)
     rules = load_rules()
     out_dir = out or Path(cfg.artifacts_dir)
