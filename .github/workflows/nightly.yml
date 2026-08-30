@@ -3,6 +3,7 @@ name: Nightly registry scan
 on:
   schedule:
     - cron: "0 18 * * *"  # daily ~04:30 Adelaide time
+  workflow_dispatch: {}
 
 jobs:
   nightly-registry-scan:
