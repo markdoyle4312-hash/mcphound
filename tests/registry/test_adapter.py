@@ -55,6 +55,18 @@ def test_remote_version_has_no_command_and_sets_url():
     assert config.url == "https://acme.example/mcp"
 
 
+def test_remote_version_still_carries_environment_variables():
+    config = version_to_server_config(
+        _version(
+            registry_type="remote",
+            identifier="https://acme.example/mcp",
+            transport="http",
+            environment_variables=[{"name": "API_KEY", "value": "sk-abcxyz1234567890"}],
+        )
+    )
+    assert config.env == {"API_KEY": "sk-abcxyz1234567890"}
+
+
 def test_package_arguments_are_appended_as_tokens_after_the_pinned_identifier():
     config = version_to_server_config(
         _version(package_arguments=[{"name": "--port", "value": "8080"}, "--verbose"])

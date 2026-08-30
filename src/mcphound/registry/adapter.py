@@ -84,7 +84,7 @@ def version_to_server_config(version: Version) -> ServerConfig:
             transport="http",
             command=[],
             url=version.identifier,
-            env={},
+            env=_env(version.environment_variables),
             source=source,
             raw=version.raw_json,
         )
