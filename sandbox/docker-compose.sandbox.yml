@@ -29,8 +29,6 @@ services:
       OPENAI_API_KEY: "mcphound-sandbox-dummy"
     tmpfs:
       - /tmp
-    networks:
-      - dmz
     depends_on:
       - egress-proxy
 
