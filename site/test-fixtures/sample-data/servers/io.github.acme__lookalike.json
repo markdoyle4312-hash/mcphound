@@ -1,0 +1,17 @@
+{
+  "name": "io.github.acme/lookalike",
+  "score": 94,
+  "finding_count": 1,
+  "computed_at": "2026-08-30T00:00:00+00:00",
+  "findings": [
+    {
+      "rule_id": "MCP-STATIC-006",
+      "title": "Typosquat of a known MCP server package name",
+      "severity": "high",
+      "confidence": "medium",
+      "owasp": "AST04",
+      "detail": "\"@modelcontextprotocol/server-filesystemx\" is 1 edit(s) from known package \"@modelcontextprotocol/server-filesystem\"",
+      "recommendation": "Double-check the exact package name against the official registry/npm page before installing; pin the verified name and version."
+    }
+  ]
+}

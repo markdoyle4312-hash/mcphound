@@ -1,0 +1,19 @@
+[
+  {
+    "known_name": "@modelcontextprotocol/server-filesystem",
+    "known_slug": "@modelcontextprotocol__server-filesystem",
+    "neighbors": [
+      {
+        "identifier": "@modelcontextprotocol/server-filesystemx",
+        "distance": 1,
+        "server_name": "io.github.acme/lookalike",
+        "server_slug": "io.github.acme__lookalike"
+      }
+    ]
+  },
+  {
+    "known_name": "@modelcontextprotocol/server-postgres",
+    "known_slug": "@modelcontextprotocol__server-postgres",
+    "neighbors": []
+  }
+]

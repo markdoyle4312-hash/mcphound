@@ -1,0 +1,16 @@
+[
+  {
+    "name": "io.github.acme/tool",
+    "slug": "io.github.acme__tool",
+    "score": 100,
+    "finding_count": 0,
+    "last_scanned_at": "2026-08-30T00:00:00+00:00"
+  },
+  {
+    "name": "io.github.acme/lookalike",
+    "slug": "io.github.acme__lookalike",
+    "score": 94,
+    "finding_count": 1,
+    "last_scanned_at": "2026-08-30T00:00:00+00:00"
+  }
+]
