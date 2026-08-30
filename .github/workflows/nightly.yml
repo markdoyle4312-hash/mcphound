@@ -1,0 +1,37 @@
+name: Nightly registry scan
+
+on:
+  schedule:
+    - cron: "0 18 * * *"  # daily ~04:30 Adelaide time
+
+jobs:
+  nightly-registry-scan:
+    # Phase 2+ : start as a weekly cron, promote to nightly when the poller exists.
+    if: ${{ false }}  # flip on after Vercel project + secrets exist (see site/README.md)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync
+      - run: uv run mcphound registry-poll --config config/registry.yaml
+      - run: uv run mcphound registry-scan --config config/registry.yaml
+      - run: uv run mcphound registry-export --config config/registry.yaml --out site/data
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+      - name: Build and deploy to Vercel
+        working-directory: site
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx vercel build --prod --token="$VERCEL_TOKEN"
+          npx vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
