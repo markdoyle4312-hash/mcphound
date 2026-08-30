@@ -32,22 +32,25 @@ npm run lint     # eslint (flat config, eslint-config-next — next lint was rem
 npm run build    # static export to out/
 ```
 
-## Deployment (one-time manual setup)
+## Deployment
 
 This site deploys to Vercel via the Vercel CLI from the nightly CI job
-(`nightly-registry-scan` in `.github/workflows/ci.yml`), not via a
+(`nightly-registry-scan` in `.github/workflows/nightly.yml`), not via a
 git-triggered Vercel build — the export step needs live Postgres access,
 which only the CI runner has, and `data/` is never committed.
 
-1. Create a Vercel account/project (`vercel.com`), pointed at this repo
-   with **Root Directory** set to `site/` — or run `npx vercel link` from
-   `site/` locally and follow the prompts.
-2. Generate a Vercel access token (Vercel dashboard → Settings → Tokens).
-3. After linking, `site/.vercel/project.json` has your `orgId`/`projectId`.
-4. Add three repo secrets (GitHub → Settings → Secrets → Actions):
-   `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
-5. Flip `nightly-registry-scan`'s `if: false` to `if: true` (or a real
-   schedule condition) in `.github/workflows/ci.yml`.
+The Vercel project's GitHub Git integration is intentionally disconnected
+(`vercel git disconnect`) — left connected, it auto-builds a preview on
+every push from the repo root (wrong Root Directory) with no `site/data`
+present, which can only ever fail. Don't reconnect it without also fixing
+Root Directory and giving the build a sample-data fallback.
 
-Until this is done, the site only builds in CI (the `site-build` job,
-against sample data) — nothing is deployed automatically.
+The project is linked (Vercel project `marksit/site`) and the CI job runs
+daily (`0 18 * * *` UTC): poll the registry → scan → export to `site/data`
+→ `npm ci` → build and deploy to Vercel production, all against a hosted
+Neon Postgres instance (`MCPHOUND_DATABASE_URL` repo secret). Repo secrets
+in use: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`,
+`MCPHOUND_DATABASE_URL`.
+
+The `site-build` CI job (against sample data, on every push/PR) is a
+separate, faster smoke test — it doesn't deploy anything.

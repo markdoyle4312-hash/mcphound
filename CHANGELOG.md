@@ -6,6 +6,17 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### W14 site now deploys nightly
+
+`nightly-registry-scan` (`.github/workflows/nightly.yml`) is live: it polls
+the registry, scans, exports to `site/data`, and deploys the Next.js site to
+Vercel production on a daily cron. This needed a hosted Postgres for CI to
+reach — `registry-poll`/`registry-scan` had only ever been run locally
+before — so a Neon Postgres instance now backs it, schema migrated via
+`alembic upgrade head`. Also fixed the job's `uv sync` missing
+`--all-extras`, which would have failed the first real run since
+`registry-poll` needs the `registry` extra.
+
 ## [0.1.3] — 2026-08-30
 
 ### CI fix: the entire pipeline had been running zero jobs

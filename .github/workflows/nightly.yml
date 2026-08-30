@@ -6,16 +6,16 @@ on:
 
 jobs:
   nightly-registry-scan:
-    # Phase 2+ : start as a weekly cron, promote to nightly when the poller exists.
-    if: ${{ false }}  # flip on after Vercel project + secrets exist (see site/README.md)
     runs-on: ubuntu-latest
+    env:
+      MCPHOUND_DATABASE_URL: ${{ secrets.MCPHOUND_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: uv sync
+      - run: uv sync --all-extras
       - run: uv run mcphound registry-poll --config config/registry.yaml
       - run: uv run mcphound registry-scan --config config/registry.yaml
       - run: uv run mcphound registry-export --config config/registry.yaml --out site/data
