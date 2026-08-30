@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from sqlalchemy import select
+
 from mcphound import __version__
 from mcphound.api.queries import get_server_by_name, get_server_by_slug
+from mcphound.db.models import Server
 from mcphound.registry.artifacts import _safe_filename, escape_name_component
 from mcphound.registry.scanner import run_scan, run_scoring
 from mcphound.rules.loader import load_rules
@@ -60,13 +63,30 @@ def test_get_server_by_slug_resolves_a_case_collision_suffix(db_session_fixture,
     run_scan(db_session_fixture, RULES, __version__)
     run_scoring(db_session_fixture, __version__)
 
-    seen: set[str] = set()
-    first_slug = _safe_filename("io.github.Foo/bar", seen).removesuffix(".json")
-    second_slug = _safe_filename("io.github.foo/bar", seen).removesuffix(".json")
-    assert first_slug != second_slug  # sanity: the fixture data actually collides
+    # get_server_by_slug (and write_artifacts) assign slugs by walking
+    # `ORDER BY Server.name` and suffixing on a case-insensitive collision as
+    # they go — so which of the two names gets the bare slug and which gets
+    # the suffix depends on Postgres's collation, not Python's `str` order
+    # (e.g. "Foo" < "foo" in Python, but many Postgres collations sort them
+    # the other way round). Derive the expected order from the DB itself
+    # rather than assuming one, so this test passes under any collation.
+    names_in_db_order = (
+        db_session_fixture.execute(
+            select(Server.name)
+            .where(Server.name.in_(["io.github.Foo/bar", "io.github.foo/bar"]))
+            .order_by(Server.name)
+        )
+        .scalars()
+        .all()
+    )
+    assert set(names_in_db_order) == {"io.github.Foo/bar", "io.github.foo/bar"}
 
-    first = get_server_by_slug(db_session_fixture, first_slug)
-    second = get_server_by_slug(db_session_fixture, second_slug)
+    seen: set[str] = set()
+    slugs = {name: _safe_filename(name, seen).removesuffix(".json") for name in names_in_db_order}
+    assert slugs["io.github.Foo/bar"] != slugs["io.github.foo/bar"]  # sanity: it collides
+
+    first = get_server_by_slug(db_session_fixture, slugs["io.github.Foo/bar"])
+    second = get_server_by_slug(db_session_fixture, slugs["io.github.foo/bar"])
 
     assert first is not None and first.name == "io.github.Foo/bar"
     assert second is not None and second.name == "io.github.foo/bar"
