@@ -97,8 +97,11 @@ class Hash(Base):
     version_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("versions.id"), nullable=False)
     sha256: Mapped[str] = mapped_column(String, nullable=False)
     source: Mapped[str] = mapped_column(String, nullable=False, server_default="registry")
+    # clock_timestamp(), not now(): now() is frozen at transaction start in Postgres, so
+    # rows inserted later in the same transaction as a Scan would tie with it, breaking
+    # scanner._needs_rescan's "is this hash newer than the last scan" comparison.
     observed_at: Mapped[dt.datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
+        DateTime(timezone=True), nullable=False, server_default=func.clock_timestamp()
     )
 
     version: Mapped[Version] = relationship(back_populates="hashes")
@@ -109,8 +112,9 @@ class Scan(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     version_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("versions.id"), nullable=False)
+    # See Hash.observed_at for why clock_timestamp() rather than now().
     scanned_at: Mapped[dt.datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
+        DateTime(timezone=True), nullable=False, server_default=func.clock_timestamp()
     )
     mcphound_version: Mapped[str] = mapped_column(String, nullable=False)
     deep: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -145,8 +149,9 @@ class ServerScore(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     server_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("servers.id"), nullable=False)
+    # See Hash.observed_at for why clock_timestamp() rather than now().
     computed_at: Mapped[dt.datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
+        DateTime(timezone=True), nullable=False, server_default=func.clock_timestamp()
     )
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     finding_count: Mapped[int] = mapped_column(Integer, nullable=False)
