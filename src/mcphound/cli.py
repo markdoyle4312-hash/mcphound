@@ -29,13 +29,14 @@ try:
     from .db.session import get_session_factory
     from .registry.artifacts import write_all_artifacts
     from .registry.poller import run_poll
-    from .registry.scanner import run_scan, run_scoring
+    from .registry.scanner import DEFAULT_MAX_WORKERS, run_scan, run_scoring
 except ImportError:
     get_session_factory = None
     write_all_artifacts = None
     run_poll = None
     run_scan = None
     run_scoring = None
+    DEFAULT_MAX_WORKERS = 16
 
 
 def _require_registry_extra() -> None:
@@ -278,6 +279,13 @@ def registry_scan(
         bool,
         typer.Option("--dry-run", help="Run the full pipeline but roll back instead of committing"),
     ] = False,
+    workers: Annotated[
+        int,
+        typer.Option(
+            "--workers",
+            help="Concurrent workers for rule evaluation (npm provenance is network-bound)",
+        ),
+    ] = DEFAULT_MAX_WORKERS,
 ):
     """Batch-scan every currently-listed registry server, score it 0-100, and
     write JSON artifacts. Run after `registry-poll` has populated the DB."""
@@ -288,7 +296,7 @@ def registry_scan(
     out_dir = out or Path(cfg.artifacts_dir)
     session = get_session_factory()()
     try:
-        scan_summary = run_scan(session, rules, __version__)
+        scan_summary = run_scan(session, rules, __version__, max_workers=workers)
         score_summary = run_scoring(session, __version__)
         if dry_run:
             session.rollback()

@@ -76,6 +76,10 @@ Network-dependent rules (currently just the npm provenance check,
 checking against the public registry is exactly what this pipeline exists
 to produce.
 
+Rule evaluation runs on a thread pool (`--workers`, default 16) since it's
+I/O-bound — mostly that same npm provenance HTTP call, one per in-scope
+version. `--workers 1` reproduces the old fully-sequential behavior.
+
 ## Site export: `mcphound registry-export`
 
 `registry-scan` already writes JSON artifacts as part of its pipeline, but
