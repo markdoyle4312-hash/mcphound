@@ -6,6 +6,8 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-08-30
+
 ### CI fix: the entire pipeline had been running zero jobs
 
 An internal audit (2026-08-30) found that `.github/workflows/ci.yml`'s
