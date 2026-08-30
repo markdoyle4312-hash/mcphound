@@ -59,6 +59,13 @@ Ingests the official MCP Registry into a local Postgres database for future
 reputation-scoring work. Not needed to use `mcphound scan`/`inspect`/`feedback`
 — see [docs/registry-poller.md](docs/registry-poller.md) for setup.
 
+## Read-only API (local, opt-in)
+
+A free, rate-limited JSON API + embeddable badge over the scored registry
+data — `GET /v1/servers/{slug}`, `GET /v1/check?name=`, `GET
+/v1/badge/{slug}.svg`. See [docs/api.md](docs/api.md) for the full
+reference and how to run it locally.
+
 ## Development
 
 ```bash
