@@ -9,6 +9,7 @@ rolls back."""
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -23,6 +24,12 @@ from .scoring import dedupe_by_rule_id, score_server
 logger = logging.getLogger(__name__)
 
 _SCAN_PROGRESS_INTERVAL = 25
+
+# evaluate() is I/O-bound (MCP-STATIC-007's npm registry lookup dominates), so a
+# thread pool — not more processes — is the right tool; ~25k in-scope versions at
+# one sequential network round-trip apiece is what blew the nightly job past
+# GitHub Actions' 6h job limit.
+DEFAULT_MAX_WORKERS = 16
 
 
 @dataclass
@@ -95,38 +102,72 @@ def _write_scan(session: Session, version_id: int, mcphound_version: str, findin
         )
 
 
-def run_scan(session: Session, rules: list[dict], mcphound_version: str) -> ScanSummary:
+def run_scan(
+    session: Session,
+    rules: list[dict],
+    mcphound_version: str,
+    max_workers: int = DEFAULT_MAX_WORKERS,
+) -> ScanSummary:
     """No --deep filtering here (unlike the local `scan` command) — network-
-    dependent rules (npm provenance) always run in the registry pipeline."""
+    dependent rules (npm provenance) always run in the registry pipeline.
+
+    Rule evaluation runs on a thread pool: `evaluate()` is pure/session-free
+    (its only side effect is the npm HTTP call), so it's safe to fan out. Every
+    session/ORM touch — reading `versions`, building each ServerConfig, writing
+    `Scan`/`Finding` rows — stays on this thread only, since the SQLAlchemy
+    Session isn't thread-safe."""
     versions = _in_scope_versions(session)
     total = len(versions)
     logger.info("registry-scan: %d version(s) in scope", total)
     summary = ScanSummary()
-    for version in versions:
-        summary.versions_seen += 1
-        if not _needs_rescan(session, version, mcphound_version):
-            summary.versions_skipped += 1
-        else:
-            try:
-                server_config = version_to_server_config(version)
-                findings = evaluate(server_config, rules)
-            except Exception:
-                logger.exception("registry-scan: failed to scan version_id=%s", version.id)
-                _write_scan(session, version.id, mcphound_version, [], status="error")
-                summary.versions_errored += 1
-            else:
-                _write_scan(session, version.id, mcphound_version, findings, status="ok")
-                summary.versions_scanned += 1
-                summary.findings_written += len(findings)
-        if summary.versions_seen % _SCAN_PROGRESS_INTERVAL == 0 or summary.versions_seen == total:
+    processed = 0
+
+    def _log_progress() -> None:
+        if processed % _SCAN_PROGRESS_INTERVAL == 0 or processed == total:
             logger.info(
                 "registry-scan: %d/%d versions processed (%d scanned, %d skipped, %d errored)",
-                summary.versions_seen,
+                processed,
                 total,
                 summary.versions_scanned,
                 summary.versions_skipped,
                 summary.versions_errored,
             )
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {}
+        for version in versions:
+            summary.versions_seen += 1
+            if not _needs_rescan(session, version, mcphound_version):
+                summary.versions_skipped += 1
+                processed += 1
+                _log_progress()
+                continue
+            try:
+                server_config = version_to_server_config(version)
+            except Exception:
+                logger.exception("registry-scan: failed to scan version_id=%s", version.id)
+                _write_scan(session, version.id, mcphound_version, [], status="error")
+                summary.versions_errored += 1
+                processed += 1
+                _log_progress()
+                continue
+            futures[executor.submit(evaluate, server_config, rules)] = version.id
+
+        for future in as_completed(futures):
+            version_id = futures[future]
+            try:
+                findings = future.result()
+            except Exception:
+                logger.exception("registry-scan: failed to scan version_id=%s", version_id)
+                _write_scan(session, version_id, mcphound_version, [], status="error")
+                summary.versions_errored += 1
+            else:
+                _write_scan(session, version_id, mcphound_version, findings, status="ok")
+                summary.versions_scanned += 1
+                summary.findings_written += len(findings)
+            processed += 1
+            _log_progress()
+
     session.flush()
     return summary
 
