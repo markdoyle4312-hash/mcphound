@@ -1,4 +1,11 @@
 Release runbook — first PyPI publish (v0.1.0)
+
+**Historical / one-time bootstrap doc.** This covers the v0.1.0 first-ever
+publish steps (PyPI account setup, wheel-contents verification, TestPyPI
+dry-run) — already done. For every release after v0.1.0, use
+`.claude/skills/release/SKILL.md` instead; it's the current, repeatable
+checklist. Kept here as a record of the one-time setup steps.
+
 Work through top to bottom. The whole thing takes ~15 minutes.
 
 1. Fix the placeholders BEFORE building
