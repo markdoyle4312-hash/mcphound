@@ -82,7 +82,7 @@ jobs:
       - name: Install
         run: uv sync --all-extras
       - name: DB-backed tests (runs Alembic migrations via the test fixture)
-        run: uv run pytest tests/db tests/registry -q
+        run: uv run pytest tests/db tests/registry tests/api -q
 
   site-build:
     runs-on: ubuntu-latest

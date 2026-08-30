@@ -43,6 +43,11 @@ registry = [
   "alembic>=1.13",
   "psycopg[binary]>=3.1",
 ]
+api = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "slowapi>=0.1.9",
+]
 
 [project.scripts]
 mcphound = "mcphound.cli:app"
@@ -60,6 +65,11 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's Depends()-as-default-argument is the framework's own required
+# pattern, not the mutable-default footgun B008 exists to catch.
+extend-immutable-calls = ["fastapi.Depends"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
