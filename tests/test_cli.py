@@ -201,12 +201,12 @@ def test_registry_scan_dry_run_rolls_back_and_skips_artifacts(monkeypatch, tmp_p
     fake_scan_summary.format.return_value = "versions: 0 in scope"
     fake_score_summary = MagicMock()
     fake_score_summary.format.return_value = "servers scored: 0"
-    write_artifacts_mock = MagicMock()
+    write_all_artifacts_mock = MagicMock()
 
     monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
     monkeypatch.setattr(cli_module, "run_scan", lambda session, rules, version: fake_scan_summary)
     monkeypatch.setattr(cli_module, "run_scoring", lambda session, version: fake_score_summary)
-    monkeypatch.setattr(cli_module, "write_artifacts", write_artifacts_mock)
+    monkeypatch.setattr(cli_module, "write_all_artifacts", write_all_artifacts_mock)
 
     runner = CliRunner()
     result = runner.invoke(app, ["registry-scan", "--config", str(cfg_path), "--dry-run"])
@@ -214,7 +214,7 @@ def test_registry_scan_dry_run_rolls_back_and_skips_artifacts(monkeypatch, tmp_p
     assert result.exit_code == 0
     fake_session.rollback.assert_called_once()
     fake_session.commit.assert_not_called()
-    write_artifacts_mock.assert_not_called()
+    write_all_artifacts_mock.assert_not_called()
     assert "dry-run" in result.stdout
 
 
@@ -234,7 +234,7 @@ def test_registry_scan_commits_and_writes_artifacts_by_default(monkeypatch, tmp_
     monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
     monkeypatch.setattr(cli_module, "run_scan", lambda session, rules, version: fake_scan_summary)
     monkeypatch.setattr(cli_module, "run_scoring", lambda session, version: fake_score_summary)
-    monkeypatch.setattr(cli_module, "write_artifacts", lambda session, out: 1)
+    monkeypatch.setattr(cli_module, "write_all_artifacts", lambda session, out, rules: (1, 0))
 
     runner = CliRunner()
     result = runner.invoke(app, ["registry-scan", "--config", str(cfg_path), "--out", str(out_dir)])
@@ -260,16 +260,66 @@ def test_registry_scan_defaults_out_dir_from_config(monkeypatch, tmp_path):
     fake_scan_summary.format.return_value = "versions: 0 in scope"
     fake_score_summary = MagicMock()
     fake_score_summary.format.return_value = "servers scored: 0"
-    write_artifacts_mock = MagicMock(return_value=0)
+    write_all_artifacts_mock = MagicMock(return_value=(0, 0))
 
     monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
     monkeypatch.setattr(cli_module, "run_scan", lambda session, rules, version: fake_scan_summary)
     monkeypatch.setattr(cli_module, "run_scoring", lambda session, version: fake_score_summary)
-    monkeypatch.setattr(cli_module, "write_artifacts", write_artifacts_mock)
+    monkeypatch.setattr(cli_module, "write_all_artifacts", write_all_artifacts_mock)
 
     runner = CliRunner()
     result = runner.invoke(app, ["registry-scan", "--config", str(cfg_path)])
 
     assert result.exit_code == 0
-    called_out_dir = write_artifacts_mock.call_args.args[1]
+    called_out_dir = write_all_artifacts_mock.call_args.args[1]
+    assert str(called_out_dir) == "my-artifacts"
+
+
+def test_registry_export_writes_artifacts_without_scanning(monkeypatch, tmp_path):
+    from mcphound import cli as cli_module
+
+    cfg_path = tmp_path / "registry.yaml"
+    cfg_path.write_text("registry:\n  base_url: https://registry.example\n", encoding="utf-8")
+    out_dir = tmp_path / "out"
+
+    fake_session = MagicMock()
+    write_all_artifacts_mock = MagicMock(return_value=(3, 1))
+    run_scan_mock = MagicMock()
+
+    monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
+    monkeypatch.setattr(cli_module, "write_all_artifacts", write_all_artifacts_mock)
+    monkeypatch.setattr(cli_module, "run_scan", run_scan_mock)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app, ["registry-export", "--config", str(cfg_path), "--out", str(out_dir)]
+    )
+
+    assert result.exit_code == 0
+    run_scan_mock.assert_not_called()
+    fake_session.commit.assert_not_called()
+    called_out_dir = write_all_artifacts_mock.call_args.args[1]
+    assert called_out_dir == out_dir
+    assert "wrote artifacts for 3 server(s) and 1 typosquat cluster(s)" in result.stdout
+
+
+def test_registry_export_defaults_out_dir_from_config(monkeypatch, tmp_path):
+    from mcphound import cli as cli_module
+
+    cfg_path = tmp_path / "registry.yaml"
+    cfg_path.write_text(
+        "registry:\n  base_url: https://registry.example\n  artifacts_dir: my-artifacts\n",
+        encoding="utf-8",
+    )
+    fake_session = MagicMock()
+    write_all_artifacts_mock = MagicMock(return_value=(0, 0))
+
+    monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
+    monkeypatch.setattr(cli_module, "write_all_artifacts", write_all_artifacts_mock)
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["registry-export", "--config", str(cfg_path)])
+
+    assert result.exit_code == 0
+    called_out_dir = write_all_artifacts_mock.call_args.args[1]
     assert str(called_out_dir) == "my-artifacts"

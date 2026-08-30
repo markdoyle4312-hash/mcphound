@@ -15,7 +15,7 @@ from .db.session import get_session_factory
 from .discovery.clients import discover_configs, load_servers
 from .models import SEVERITY_ORDER, ScanResult
 from .output import to_json, to_sarif
-from .registry.artifacts import write_artifacts
+from .registry.artifacts import write_all_artifacts
 from .registry.config import load_config
 from .registry.poller import run_poll
 from .registry.scanner import run_scan, run_scoring
@@ -267,14 +267,46 @@ def registry_scan(
             typer.echo(f"[dry-run, rolled back] {scan_summary.format()}; {score_summary.format()}")
         else:
             session.commit()
-            written = write_artifacts(session, out_dir)
+            written, clustered = write_all_artifacts(session, out_dir, rules)
             typer.echo(
                 f"{scan_summary.format()}; {score_summary.format()}; "
-                f"wrote artifacts for {written} server(s) to {out_dir}"
+                f"wrote artifacts for {written} server(s) and {clustered} typosquat "
+                f"cluster(s) to {out_dir}"
             )
     except Exception:
         session.rollback()
         raise
+    finally:
+        session.close()
+
+
+@app.command(name="registry-export")
+def registry_export(
+    config_path: Annotated[
+        Path, typer.Option("--config", help="Path to registry poll config YAML")
+    ] = Path("config/registry.yaml"),
+    out: Annotated[
+        Path | None,
+        typer.Option(
+            "--out",
+            help="Directory for per-server JSON + index.json (default: config's artifacts_dir)",
+        ),
+    ] = None,
+):
+    """Re-materialize JSON artifacts (per-server scores, leaderboard index,
+    typosquat clusters) from already-scored DB state, without rescanning.
+    Cheap enough to run before every site deploy; run `registry-scan` on
+    its own schedule to actually update scores."""
+    cfg = load_config(config_path)
+    rules = load_rules()
+    out_dir = out or Path(cfg.artifacts_dir)
+    session = get_session_factory()()
+    try:
+        written, clustered = write_all_artifacts(session, out_dir, rules)
+        typer.echo(
+            f"wrote artifacts for {written} server(s) and {clustered} typosquat "
+            f"cluster(s) to {out_dir}"
+        )
     finally:
         session.close()
 

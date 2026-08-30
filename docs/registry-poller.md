@@ -76,6 +76,33 @@ Network-dependent rules (currently just the npm provenance check,
 checking against the public registry is exactly what this pipeline exists
 to produce.
 
+## Site export: `mcphound registry-export`
+
+`registry-scan` already writes JSON artifacts as part of its pipeline, but
+re-running a full scan just to refresh those files is wasteful when scores
+haven't changed. `registry-export` re-materializes the same artifacts
+(`index.json`, `servers/<name>.json`, `typosquat-clusters.json`) directly
+from already-scored DB state — no rescanning, no DB writes:
+
+```bash
+uv run mcphound registry-export --config config/registry.yaml
+# or with an explicit output directory:
+uv run mcphound registry-export --out site/data
+```
+
+This is what the W14 static site's build pipeline runs before `next build`
+— see `site/README.md`. `index.json` entries also carry a `slug` field (the
+exact filename, minus `.json`, of that server's file under
+`artifacts/servers/`) so the site never has to reimplement the
+escaping/collision logic that produces those filenames.
+
+`typosquat-clusters.json` holds, for each name in `MCP-STATIC-006`'s bundled
+reference list (`src/mcphound/rules/data/known_servers.yaml`), every
+currently-listed registry package within that rule's edit-distance
+threshold (excluding an exact match) — an empty `neighbors` list is
+expected and valid, not a bug, until the registry actually has a lookalike
+or the reference list grows.
+
 ## Schema
 
 Six tables (`src/mcphound/db/models.py`), all timestamps `timestamptz`, every
