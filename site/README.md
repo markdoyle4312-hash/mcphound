@@ -39,6 +39,12 @@ This site deploys to Vercel via the Vercel CLI from the nightly CI job
 git-triggered Vercel build — the export step needs live Postgres access,
 which only the CI runner has, and `data/` is never committed.
 
+The Vercel project's GitHub Git integration is intentionally disconnected
+(`vercel git disconnect`) — left connected, it auto-builds a preview on
+every push from the repo root (wrong Root Directory) with no `site/data`
+present, which can only ever fail. Don't reconnect it without also fixing
+Root Directory and giving the build a sample-data fallback.
+
 The project is linked (Vercel project `marksit/site`) and the CI job runs
 daily (`0 18 * * *` UTC): poll the registry → scan → export to `site/data`
 → `npm ci` → build and deploy to Vercel production, all against a hosted
