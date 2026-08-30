@@ -28,6 +28,7 @@ Then:
 npm install
 npm run dev      # http://localhost:3000
 npm test         # vitest unit tests (lib/ only — pages are covered by `npm run build`)
+npm run lint     # eslint (flat config, eslint-config-next — next lint was removed in Next 16)
 npm run build    # static export to out/
 ```
 

@@ -96,6 +96,8 @@ jobs:
           node-version: "22"
       - name: Install
         run: npm ci
+      - name: Lint
+        run: npm run lint
       - name: Unit tests
         run: npm test
       - name: Populate sample data for the build smoke test
