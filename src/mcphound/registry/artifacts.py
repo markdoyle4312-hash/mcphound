@@ -21,6 +21,14 @@ logger = logging.getLogger(__name__)
 _UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_.-]")
 
 
+def escape_name_component(name: str) -> str:
+    """Escape one registry name into filesystem-/URL-slug-safe form: '/'
+    becomes '__' (so it reads as a name segment, not a path separator),
+    everything else outside [A-Za-z0-9_.-] becomes '_'."""
+    escaped = name.replace("/", "__")
+    return _UNSAFE_NAME_CHARS.sub("_", escaped)
+
+
 def _safe_filename(server_name: str, seen_lower: set[str]) -> str:
     """Registry server names look like "io.github.foo/bar-server" — escape
     the slash first (so it reads as a name segment, not a path separator),
@@ -33,8 +41,7 @@ def _safe_filename(server_name: str, seen_lower: set[str]) -> str:
     the first with no error. `seen_lower` tracks lowercased names written so
     far in this run; a collision gets a short deterministic hash suffix
     instead of overwriting."""
-    escaped = server_name.replace("/", "__")
-    base = _UNSAFE_NAME_CHARS.sub("_", escaped)
+    base = escape_name_component(server_name)
     key = base.lower()
     if key in seen_lower:
         base = f"{base}-{hashlib.sha1(server_name.encode()).hexdigest()[:8]}"
@@ -123,7 +130,8 @@ def write_artifacts(session: Session, out_dir: Path) -> int:
             "findings": _findings_for_server(session, server.id),
         }
         try:
-            (servers_dir / _safe_filename(server.name, seen_lower)).write_text(
+            filename = _safe_filename(server.name, seen_lower)
+            (servers_dir / filename).write_text(
                 json.dumps(payload, indent=2), encoding="utf-8"
             )
         except OSError:
@@ -132,6 +140,7 @@ def write_artifacts(session: Session, out_dir: Path) -> int:
         index.append(
             {
                 "name": server.name,
+                "slug": filename.removesuffix(".json"),
                 "score": score_row.score,
                 "finding_count": score_row.finding_count,
                 "last_scanned_at": computed_at,

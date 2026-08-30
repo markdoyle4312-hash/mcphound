@@ -34,6 +34,7 @@ def test_write_artifacts_writes_a_per_server_file_and_an_index(
     assert index == [
         {
             "name": server.name,
+            "slug": "io.github.acme__tool",
             "score": 65,
             "finding_count": 1,
             "last_scanned_at": payload["computed_at"],
@@ -60,6 +61,8 @@ def test_write_artifacts_disambiguates_case_colliding_names(
     assert files[0].lower() != files[1].lower()
     index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
     assert {row["name"] for row in index} == {"io.github.Foo/bar", "io.github.foo/bar"}
+    slugs = {row["slug"] for row in index}
+    assert slugs == {f.removesuffix(".json") for f in files}
 
 
 def test_write_artifacts_skips_servers_with_no_score_yet(
@@ -83,3 +86,5 @@ def test_write_artifacts_escapes_slashes_in_server_names(
     write_artifacts(db_session_fixture, tmp_path)
 
     assert (tmp_path / "servers" / "io.github.acme__weird_name_.json").exists()
+    index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
+    assert index[0]["slug"] == "io.github.acme__weird_name_"
