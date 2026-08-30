@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import httpx
+import pytest
+
 from mcphound.registry import client
 
 _PAGE_1 = {
@@ -148,3 +151,94 @@ def test_fetch_page_filters_to_latest_version(monkeypatch):
     client._fetch_page("https://registry.example", None, 50)
 
     assert captured["params"]["version"] == "latest"
+
+
+_FAKE_REQUEST = httpx.Request("GET", "https://registry.example/v0.1/servers")
+
+
+def test_fetch_page_retries_transient_timeout_then_succeeds(monkeypatch):
+    monkeypatch.setattr(client.time, "sleep", lambda _: None)
+    calls = {"n": 0}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"servers": [], "metadata": {}}
+
+    def fake_get(url, params, timeout):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise httpx.ReadTimeout("timed out")
+        return FakeResponse()
+
+    monkeypatch.setattr(client.httpx, "get", fake_get)
+
+    result = client._fetch_page("https://registry.example", None, 50)
+
+    assert result == {"servers": [], "metadata": {}}
+    assert calls["n"] == 3
+
+
+def test_fetch_page_gives_up_after_max_attempts(monkeypatch):
+    monkeypatch.setattr(client.time, "sleep", lambda _: None)
+
+    def fake_get(url, params, timeout):
+        raise httpx.ReadTimeout("timed out")
+
+    monkeypatch.setattr(client.httpx, "get", fake_get)
+
+    with pytest.raises(httpx.ReadTimeout):
+        client._fetch_page("https://registry.example", None, 50)
+
+
+def test_fetch_page_does_not_retry_client_errors(monkeypatch):
+    monkeypatch.setattr(client.time, "sleep", lambda _: None)
+    calls = {"n": 0}
+
+    class FakeResponse:
+        status_code = 404
+
+        def raise_for_status(self):
+            raise httpx.HTTPStatusError("not found", request=_FAKE_REQUEST, response=self)
+
+    def fake_get(url, params, timeout):
+        calls["n"] += 1
+        return FakeResponse()
+
+    monkeypatch.setattr(client.httpx, "get", fake_get)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        client._fetch_page("https://registry.example", None, 50)
+
+    assert calls["n"] == 1
+
+
+def test_fetch_page_retries_server_errors_then_succeeds(monkeypatch):
+    monkeypatch.setattr(client.time, "sleep", lambda _: None)
+    calls = {"n": 0}
+
+    class FailResponse:
+        status_code = 503
+
+        def raise_for_status(self):
+            raise httpx.HTTPStatusError("bad gateway", request=_FAKE_REQUEST, response=self)
+
+    class OkResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"servers": [], "metadata": {}}
+
+    def fake_get(url, params, timeout):
+        calls["n"] += 1
+        return FailResponse() if calls["n"] < 2 else OkResponse()
+
+    monkeypatch.setattr(client.httpx, "get", fake_get)
+
+    result = client._fetch_page("https://registry.example", None, 50)
+
+    assert result == {"servers": [], "metadata": {}}
+    assert calls["n"] == 2
