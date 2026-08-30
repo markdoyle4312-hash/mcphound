@@ -68,7 +68,9 @@ def _filename_for(name: str, servers_dir_listing: list[str]) -> str | None:
     return None
 
 
-def _load_server_detail(artifacts_dir: Path, name: str, servers_dir_listing: list[str]) -> dict | None:
+def _load_server_detail(
+    artifacts_dir: Path, name: str, servers_dir_listing: list[str]
+) -> dict | None:
     filename = _filename_for(name, servers_dir_listing)
     if filename is None:
         print(f"warning: no per-server artifact found for {name!r}, skipping", file=sys.stderr)
@@ -90,7 +92,9 @@ def sample(
 ) -> list[dict]:
     flagged = [row for row in index if row["finding_count"] > 0]
     clean = [row for row in index if row["finding_count"] == 0]
-    servers_dir_listing = [p.name for p in (artifacts_dir / "servers").iterdir() if p.suffix == ".json"]
+    servers_dir_listing = [
+        p.name for p in (artifacts_dir / "servers").iterdir() if p.suffix == ".json"
+    ]
 
     details_by_name: dict[str, dict] = {}
     rare_rows: list[dict] = []
@@ -127,6 +131,12 @@ def sample(
     packets = []
     for row in selected:
         detail = details_by_name[row["name"]]
+        if row in rare_rows:
+            group = "rare-rule"
+        elif row in sampled_common:
+            group = "flagged"
+        else:
+            group = "clean"
         packets.append(
             {
                 "name": row["name"],
@@ -134,7 +144,7 @@ def sample(
                 "finding_count": detail["finding_count"],
                 "findings": detail["findings"],
                 "link": _verification_link(row["name"], detail["findings"]),
-                "group": "rare-rule" if row in rare_rows else ("flagged" if row in sampled_common else "clean"),
+                "group": group,
             }
         )
     return packets
@@ -175,7 +185,8 @@ def render_markdown(
         "",
         "## Verdict table",
         "",
-        "Fill in **Verdict** as one of: `correct` / `false-positive` / `false-negative` / `uncertain`.",
+        "Fill in **Verdict** as one of: `correct` / `false-positive` / `false-negative` / "
+        "`uncertain`.",
         "",
         "| # | Server | Score | Rule(s) | Link | Verdict | Notes |",
         "|---|---|---|---|---|---|---|",
@@ -195,7 +206,10 @@ def render_markdown(
         if p["findings"]:
             lines.append("- Findings:")
             for f in p["findings"]:
-                lines.append(f"  - **{f['rule_id']}** ({f['severity']}/{f['confidence']}, {f['owasp']}) — {f['title']}")
+                lines.append(
+                    f"  - **{f['rule_id']}** ({f['severity']}/{f['confidence']}, "
+                    f"{f['owasp']}) — {f['title']}"
+                )
                 lines.append(f"    - Detail: {f['detail']}")
                 lines.append(f"    - Recommendation: {f['recommendation']}")
         else:
@@ -219,12 +233,15 @@ def main() -> None:
     flagged_total = sum(1 for r in index if r["finding_count"] > 0)
     clean_total = total - flagged_total
 
-    packets = sample(index, args.artifacts_dir, args.seed, args.flagged_sample_size, args.clean_sample_size)
+    packets = sample(
+        index, args.artifacts_dir, args.seed, args.flagged_sample_size, args.clean_sample_size
+    )
 
     date_str = dt.date.today().isoformat()
     out = args.out or REPO_ROOT / "docs" / "spot-checks" / f"w16-{date_str}.md"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render_markdown(packets, total, flagged_total, clean_total, args.seed, date_str), encoding="utf-8")
+    markdown = render_markdown(packets, total, flagged_total, clean_total, args.seed, date_str)
+    out.write_text(markdown, encoding="utf-8")
     print(f"wrote {len(packets)}-server review packet to {out}")
 
 
