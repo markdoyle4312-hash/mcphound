@@ -6,6 +6,56 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### W12-13 batch scanning pipeline + scoring engine
+
+New `mcphound registry-scan --config config/registry.yaml [--out DIR] [--dry-run]`
+command: runs every in-scope (`is_latest=True`, not delisted) registry version
+through the existing static rule engine, writes `scans`/`findings` rows,
+computes a 0-100 score per server (multiplicative severity/confidence decay —
+`registry/scoring.py`) into `server_scores`, and writes per-server JSON +
+`index.json` (a leaderboard summary) to `artifacts/` for W14's static site
+generator. Incremental: a version is skipped if it already has a scan from
+the current mcphound version with no newer hash observed since. Unlike the
+local `scan` command, network-dependent rules (npm provenance,
+`MCP-STATIC-007`) always run here — a nightly batch job has no latency
+pressure to hide behind `--deep`.
+
+Ran the full pipeline against the live registry for the first time this
+session, which surfaced two real bugs the code review alone hadn't caught:
+
+- **`registry-poll` was pulling ~3.4x more than it needed.** `/v0.1/servers`
+  returns one row per *published version* of every server unless filtered —
+  ~85,000 rows for the registry's ~25,000 actually-current servers.
+  `registry-scan` only ever reads `is_latest=True` versions, so the
+  unfiltered walk was pure wasted paging + DB upserts. `client.py` now sends
+  `version=latest` on every page request (confirmed against the live OpenAPI
+  spec — also corrected `docs/registry-poller.md`'s stale claim that the
+  registry has no delta mechanism at all; it exposes `updated_since`, just
+  not wired up yet).
+- **Case-colliding server names clobbered each other's artifact.** 5 pairs of
+  real registry names differ only by case (e.g. `io.github.ClockNext/mcp` vs
+  `io.github.Clocknext/mcp`). On a case-insensitive filesystem the second
+  artifact write silently overwrote the first, while `index.json` still
+  listed both as if each had its own file. `artifacts.py::_safe_filename`
+  now appends a short deterministic hash suffix on a case-insensitive
+  collision; servers are written in name order so which one gets the suffix
+  is stable across runs.
+
+Also added progress logging (`registry-poll` every 100 servers,
+`registry-scan` every 25 versions) — both commands had no console feedback
+otherwise, and a real run is a multi-minute-to-hour batch job.
+
+**First full real-registry run** (2026-08-30, post-fix): 25,273 servers
+scored, 821 flagged (score < 100), scores ranging 76-100, average 99.8.
+Findings by rule: `MCP-STATIC-007` (no discoverable npm `repository` field)
+817, `MCP-STATIC-003` (over-broad host/filesystem permissions) 2,
+`MCP-STATIC-004` (unpinned/`@latest` package) 2 — the last is worth a closer
+look later, since `registry/adapter.py` pins every npm/pypi version to its
+exact release specifically to suppress this rule; these 2 likely have an
+unpinned string inside `runtimeArguments`/`packageArguments` rather than the
+main package identifier. Not yet spot-checked by a human (that's W16's
+gate) — treat these as a first pass, not verified scores.
+
 ### W10-11 registry poller + Postgres schema
 
 New `mcphound registry-poll --config config/registry.yaml [--dry-run]` command
