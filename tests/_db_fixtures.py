@@ -35,8 +35,14 @@ def _require_test_database_url() -> str:
     return url
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def _migrated_test_db():
+    """Not autouse: only tests that actually touch the DB should pay for
+    (or skip on) migrations. db_session_fixture below depends on this
+    explicitly, so any test using db_session_fixture/seed_version/the API's
+    client fixture gets it transitively — a test in the same directory that
+    never requests those (e.g. tests/db/test_models.py, which only inspects
+    SQLAlchemy metadata) runs unaffected by DB availability."""
     _require_test_database_url()
     db_session.reset_engine()
     alembic_cfg = AlembicConfig(str(REPO_ROOT / "alembic.ini"))
@@ -45,7 +51,7 @@ def _migrated_test_db():
 
 
 @pytest.fixture
-def db_session_fixture():
+def db_session_fixture(_migrated_test_db):
     factory = db_session.get_session_factory()
     session = factory()
     try:
