@@ -4,6 +4,7 @@ directly (a directory of per-server files, not one combined file)."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -20,12 +21,26 @@ logger = logging.getLogger(__name__)
 _UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_.-]")
 
 
-def _safe_filename(server_name: str) -> str:
+def _safe_filename(server_name: str, seen_lower: set[str]) -> str:
     """Registry server names look like "io.github.foo/bar-server" — escape
     the slash first (so it reads as a name segment, not a path separator),
-    then replace anything else filesystem-unsafe."""
+    then replace anything else filesystem-unsafe.
+
+    Two real registry names differing only by case (e.g. "io.github.Foo/bar"
+    vs "io.github.foo/bar") escape to filenames that collide on a
+    case-insensitive filesystem (NTFS) even though they're distinct on
+    case-sensitive ones (ext4, CI) — a second write would silently clobber
+    the first with no error. `seen_lower` tracks lowercased names written so
+    far in this run; a collision gets a short deterministic hash suffix
+    instead of overwriting."""
     escaped = server_name.replace("/", "__")
-    return _UNSAFE_NAME_CHARS.sub("_", escaped) + ".json"
+    base = _UNSAFE_NAME_CHARS.sub("_", escaped)
+    key = base.lower()
+    if key in seen_lower:
+        base = f"{base}-{hashlib.sha1(server_name.encode()).hexdigest()[:8]}"
+        key = base.lower()
+    seen_lower.add(key)
+    return base + ".json"
 
 
 def _latest_score(session: Session, server_id: int) -> ServerScore | None:
@@ -92,7 +107,10 @@ def write_artifacts(session: Session, out_dir: Path) -> int:
     servers_dir.mkdir(parents=True, exist_ok=True)
     index: list[dict] = []
     written = 0
-    for server in session.execute(select(Server)).scalars():
+    seen_lower: set[str] = set()
+    # Ordered by name so which of two case-colliding names gets the plain
+    # filename (vs. the hash-suffixed one) is stable across runs.
+    for server in session.execute(select(Server).order_by(Server.name)).scalars():
         score_row = _latest_score(session, server.id)
         if score_row is None:
             continue
@@ -105,7 +123,7 @@ def write_artifacts(session: Session, out_dir: Path) -> int:
             "findings": _findings_for_server(session, server.id),
         }
         try:
-            (servers_dir / _safe_filename(server.name)).write_text(
+            (servers_dir / _safe_filename(server.name, seen_lower)).write_text(
                 json.dumps(payload, indent=2), encoding="utf-8"
             )
         except OSError:

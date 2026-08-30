@@ -41,6 +41,27 @@ def test_write_artifacts_writes_a_per_server_file_and_an_index(
     ]
 
 
+def test_write_artifacts_disambiguates_case_colliding_names(
+    db_session_fixture, seed_version, tmp_path
+):
+    """Two registry names differing only by case escape to the same filename
+    on a case-insensitive filesystem (NTFS) — the second must not silently
+    clobber the first."""
+    seed_version(server_name="io.github.Foo/bar")
+    seed_version(server_name="io.github.foo/bar")
+    run_scan(db_session_fixture, RULES, __version__)
+    run_scoring(db_session_fixture, __version__)
+
+    written = write_artifacts(db_session_fixture, tmp_path)
+
+    assert written == 2
+    files = sorted(p.name for p in (tmp_path / "servers").glob("*.json"))
+    assert len(files) == 2
+    assert files[0].lower() != files[1].lower()
+    index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
+    assert {row["name"] for row in index} == {"io.github.Foo/bar", "io.github.foo/bar"}
+
+
 def test_write_artifacts_skips_servers_with_no_score_yet(
     db_session_fixture, seed_version, tmp_path
 ):
