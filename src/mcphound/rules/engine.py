@@ -28,19 +28,15 @@ One finding per rule per server (first match wins).
 
 from __future__ import annotations
 
-import functools
 import json
 import re
 import time
-from pathlib import Path
 
 import httpx
-import yaml
-from rapidfuzz.distance import Levenshtein
 
 from ..models import Finding, ServerConfig
+from .typosquat import extract_command_package, load_reference_list, nearest_match
 
-_DATA_DIR = Path(__file__).parent / "data"
 _NPM_TIMEOUT = 5.0
 _NPM_MAX_RETRIES = 3
 _NPM_BACKOFF_SECONDS = 0.5
@@ -87,48 +83,15 @@ def _evaluate_regex(server: ServerConfig, rule: dict, detect: dict) -> list[Find
     return findings
 
 
-@functools.lru_cache
-def _load_reference_list(filename: str) -> tuple[str, ...]:
-    data = yaml.safe_load((_DATA_DIR / filename).read_text(encoding="utf-8"))
-    return tuple(data) if isinstance(data, list) else ()
-
-
-def _package_name(spec: str) -> str:
-    """Strip a trailing "@version" (or "@latest") from an npm-style package spec,
-    preserving a scoped package's own leading "@scope/" segment."""
-    if spec.startswith("@"):
-        slash = spec.find("/")
-        if slash == -1:
-            return spec
-        at = spec.find("@", slash)
-    else:
-        at = spec.find("@")
-    return spec[:at] if at != -1 else spec
-
-
-def _extract_command_package(server: ServerConfig) -> str | None:
-    tokens = server.command
-    for i, tok in enumerate(tokens):
-        if tok in ("npx", "uvx"):
-            for cand in tokens[i + 1 :]:
-                if cand.startswith("-"):
-                    continue
-                return _package_name(cand)
-    return None
-
-
 def _evaluate_typosquat(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
-    pkg = _extract_command_package(server)
+    pkg = extract_command_package(server)
     if not pkg:
         return []
-    reference = _load_reference_list(detect.get("reference_list", ""))
-    if not reference or pkg in reference:
+    reference = load_reference_list(detect.get("reference_list", ""))
+    match = nearest_match(pkg, reference, int(detect.get("max_distance", 2)))
+    if match is None:
         return []
-    max_distance = int(detect.get("max_distance", 2))
-    best = min(reference, key=lambda ref: Levenshtein.distance(pkg, ref))
-    distance = Levenshtein.distance(pkg, best)
-    if distance == 0 or distance > max_distance:
-        return []
+    best, distance = match
     detail = f'"{pkg}" is {distance} edit(s) from known package "{best}"'
     return [_make_finding(rule, server, detail)]
 
@@ -156,7 +119,7 @@ def _fetch_npm_metadata(pkg: str) -> dict | None:
 def _evaluate_npm_provenance(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
     if "npx" not in server.command:
         return []
-    pkg = _extract_command_package(server)
+    pkg = extract_command_package(server)
     if not pkg:
         return []
     meta = _fetch_npm_metadata(pkg)
