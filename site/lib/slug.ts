@@ -3,7 +3,12 @@ export function nameToPathSegments(name: string): string[] {
 }
 
 export function pathSegmentsToName(segments: string[]): string {
-  return segments.join("/");
+  // Next's static export percent-encodes generateStaticParams() segment
+  // values (e.g. "@modelcontextprotocol" -> "%40modelcontextprotocol")
+  // internally, but hands the *encoded* string back as params.slug at
+  // render time instead of decoding it first — so undo that here rather
+  // than compare a decoded name against an encoded one and 404.
+  return segments.map(decodeURIComponent).join("/");
 }
 
 // encodeURIComponent percent-encodes '@' (to "%40"), but '@' is a valid
