@@ -194,14 +194,20 @@ def write_typosquat_clusters(session: Session, out_dir: Path, rules: list[dict])
         reference_list, max_distance = rule_config
         reference = load_reference_list(reference_list)
         candidates = _candidate_packages(session)
-        pkg_to_server = {pkg: server_name for server_name, pkg in candidates}
+        # More than one server can share the same package identifier (e.g. two
+        # forks, or a scoped/unscoped alias) — keep every one of them rather
+        # than letting a dict silently drop all but the last, which would
+        # under-report typosquat cluster membership.
+        pkg_to_servers: dict[str, list[str]] = {}
+        for server_name, pkg in candidates:
+            pkg_to_servers.setdefault(pkg, []).append(server_name)
         name_to_slug: dict[str, str] = {}
         index_path = out_dir / "index.json"
         if index_path.exists():
             rows = json.loads(index_path.read_text(encoding="utf-8"))
             name_to_slug = {row["name"]: row["slug"] for row in rows}
         for known_name in reference:
-            neighbors = neighbors_of(known_name, pkg_to_server.keys(), max_distance)
+            neighbors = neighbors_of(known_name, pkg_to_servers.keys(), max_distance)
             if neighbors:
                 clustered_count += 1
             clusters.append(
@@ -212,10 +218,11 @@ def write_typosquat_clusters(session: Session, out_dir: Path, rules: list[dict])
                         {
                             "identifier": pkg,
                             "distance": distance,
-                            "server_name": pkg_to_server[pkg],
-                            "server_slug": name_to_slug.get(pkg_to_server[pkg]),
+                            "server_name": server_name,
+                            "server_slug": name_to_slug.get(server_name),
                         }
                         for pkg, distance in neighbors
+                        for server_name in pkg_to_servers[pkg]
                     ],
                 }
             )

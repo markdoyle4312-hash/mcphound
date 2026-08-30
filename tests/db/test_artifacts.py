@@ -123,6 +123,40 @@ def test_write_typosquat_clusters_finds_near_miss_packages(
     ]
 
 
+def test_write_typosquat_clusters_lists_every_server_sharing_a_package(
+    db_session_fixture, seed_version, tmp_path
+):
+    """Two different servers can point at the same (typosquatting) package
+    identifier — both must show up as separate neighbors, not just the last
+    one seen (regression: pkg_to_server used to be a dict keyed by package,
+    silently dropping all but one server per shared identifier)."""
+    seed_version(
+        server_name="io.github.acme/lookalike-one",
+        registry_type="npm",
+        identifier="@modelcontextprotocol/server-filesystemx",
+    )
+    seed_version(
+        server_name="io.github.acme/lookalike-two",
+        registry_type="npm",
+        identifier="@modelcontextprotocol/server-filesystemx",
+    )
+    run_scan(db_session_fixture, RULES, __version__)
+    run_scoring(db_session_fixture, __version__)
+    write_artifacts(db_session_fixture, tmp_path)
+
+    write_typosquat_clusters(db_session_fixture, tmp_path, RULES)
+
+    clusters = json.loads((tmp_path / "typosquat-clusters.json").read_text(encoding="utf-8"))
+    entry = next(
+        c for c in clusters if c["known_name"] == "@modelcontextprotocol/server-filesystem"
+    )
+    assert {n["server_name"] for n in entry["neighbors"]} == {
+        "io.github.acme/lookalike-one",
+        "io.github.acme/lookalike-two",
+    }
+    assert len(entry["neighbors"]) == 2
+
+
 def test_write_typosquat_clusters_excludes_exact_matches(
     db_session_fixture, seed_version, tmp_path
 ):
