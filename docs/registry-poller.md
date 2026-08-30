@@ -22,11 +22,11 @@ and never creates duplicate rows.
 
 ## Running it nightly
 
-There's no built-in scheduler — this is a plain CLI command, so use whatever
-scheduling mechanism your OS already has. `.github/workflows/ci.yml` has a
-`nightly-registry-scan` job stub for this, but it's disabled (`if: false`)
-until there's a hosted database and secrets to run it against; for now, run
-it locally or on a machine you control.
+There's no built-in scheduler — this is a plain CLI command. In production,
+`.github/workflows/nightly.yml`'s `nightly-registry-scan` job runs it on a
+daily cron against a hosted Neon Postgres instance (`MCPHOUND_DATABASE_URL`
+repo secret), then exports and deploys the site to Vercel. For local/manual
+scheduling instead, use whatever mechanism your OS already has:
 
 **Unix (cron):** add a line to `crontab -e` (adjust the path and DSN):
 
