@@ -6,6 +6,57 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### CI fix: the entire pipeline had been running zero jobs
+
+An internal audit (2026-08-30) found that `.github/workflows/ci.yml`'s
+`nightly-registry-scan` job had a `schedule:` key nested under the job
+instead of the workflow-level `on:` block — an invalid job key that fails
+GitHub Actions' schema validation and causes the **whole workflow file** to
+be rejected, not just that job. Effect: `test` (ruff + pytest), `self-scan`,
+`docs-check`, `db-tests`, and `site-build` had never actually executed on
+GitHub for any push or PR since the line was introduced (`1d3a6b4`) —
+every "verified locally" claim in this changelog for the W14/W15 work below
+was never confirmed by CI. Fixed by moving the cron trigger into its own
+`nightly.yml` workflow so it can't invalidate the push/PR pipeline again.
+
+### W15 FastAPI read-only API
+
+New `src/mcphound/api/app.py`: a FastAPI app exposing three rate-limited
+(slowapi) endpoints over the scored registry data — `GET /v1/servers/{slug}`
+(full server detail + findings), `GET /v1/check?name=` (lookup by name), and
+`GET /v1/badge/{slug}.svg` (embeddable SVG score badge, `api/badge.py`). The
+two JSON endpoints are limited to 60/min, the badge to 300/min since it's
+expected to be embedded in READMEs and hit far more often than a direct API
+call. Response shapes are pydantic models in `api/schemas.py`; lookups go
+through `api/queries.py` (server-by-name and server-by-slug). Badge/report
+URLs are built from `MCPHOUND_SITE_BASE_URL` (defaults to
+`https://mcphound.dev`, now documented in `.env.example`). DB test fixtures
+were refactored (`tests/_db_fixtures.py`) so `tests/db`, `tests/registry`,
+and the new `tests/api` share one setup, and the DB-migration skip logic
+was fixed to only trigger for tests that actually touch the database.
+Documented in `docs/api.md`.
+
+### W14 static site + registry-export
+
+New `mcphound registry-export --config config/registry.yaml --out DIR`
+CLI command writes the scored-server artifacts (per-server JSON +
+`index.json`) to a target directory for the site to consume, plus a
+`typosquat-clusters.json` export (typosquat-neighbor logic refactored out
+of the rule engine into shared `rules/typosquat.py`). `index.json` entries
+gained a `slug` field for URL-safe per-server routing.
+
+New `site/` — a Next.js app, statically exported (`next build`), reading
+directly from the registry-export JSON with no server-side database access
+of its own: a leaderboard home page (`/`), paginated full server listing
+(`/browse/[page]`), per-server detail pages (`/servers/[...slug]`), and
+typosquat watchlist pages (`/typosquats`, `/typosquats/[...slug]`). CI got
+a `site-build` job (npm ci, vitest unit tests, `prepare:sample-data`,
+`next build`) as a push/PR smoke test, plus a `nightly-registry-scan` job
+(now in `nightly.yml`, still gated `if: false`) scaffolded to eventually
+poll → scan → export → deploy to Vercel once the Vercel project and
+secrets exist. Next was bumped to 16.3.3 and Vitest to 4.1.11, clearing 7
+npm audit advisories.
+
 ### W12-13 batch scanning pipeline + scoring engine
 
 New `mcphound registry-scan --config config/registry.yaml [--out DIR] [--dry-run]`
