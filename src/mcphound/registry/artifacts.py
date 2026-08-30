@@ -140,9 +140,7 @@ def write_artifacts(session: Session, out_dir: Path) -> int:
         }
         try:
             filename = _safe_filename(server.name, seen_lower)
-            (servers_dir / filename).write_text(
-                json.dumps(payload, indent=2), encoding="utf-8"
-            )
+            (servers_dir / filename).write_text(json.dumps(payload, indent=2), encoding="utf-8")
         except OSError:
             logger.warning("registry-scan: failed to write artifact for %s", server.name)
             continue
