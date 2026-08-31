@@ -6,6 +6,13 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-08-31
+
+Note: this is the first published release containing `mcphound allowlist
+init`/`enforce` — that feature (W18, PR #14) merged after v0.1.4 was
+already tagged, so the GitHub Action below is unusable against any
+version prior to this one.
+
 ### feat: add the mcphound GitHub Action (W19)
 
 `action.yml` at the repo root enforces `mcp-policy.yaml` on every pull
