@@ -6,6 +6,47 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-08-31
+
+### fix: catch unpinned docker/OCI images in MCP-STATIC-004
+
+The rule's regex only ever inspected npx/uvx/uv-run commands, so a
+docker-launched server was never checked at all — a floating tag like
+`ghcr.io/x/y:mcp` (or no tag, defaulting to `:latest`) sailed through as
+clean, the same rug-pull risk class the rule already targets for npm/pypi.
+Adds real OCI image-ref parsing (`_oci_image_ref`/`_evaluate_oci_pin`) as a
+secondary `also: oci_pin` check, run only when the primary pattern finds
+nothing. A tag counts as pinned if it's digest-pinned (`@sha256:...`) or
+looks like an actual version; anything else — no tag, `latest`, or a
+floating label like `mcp`/`stable`/`main` — is flagged. Verified against
+the fp_sweep corpus: `terraform-mcp-server:0.2.3` stays clean,
+`grafana/mcp-grafana` (no tag) now correctly fires. Fixes #2.
+
+### fix: distinguish unpublished npm packages in MCP-STATIC-007
+
+The npm-provenance check gave the same generic message for "package fully
+unpublished from npm" and "package's registry metadata just has no
+`repository` field" — but an unpublished package is a stronger signal, since
+the server's own launch command now points at nothing. Detects npm's
+unpublish tombstone (a `time.unpublished` marker, no dist-tags/versions) and
+surfaces a distinct detail message. Fixes #1.
+
+### fix: sandbox compose file had an invalid `networks` key
+
+`target` uses `network_mode: service:egress-proxy` to share the proxy's
+network namespace, which Compose treats as mutually exclusive with a
+separate `networks:` attachment on the same service. Removed.
+
+### fix: parallelize registry-scan rule evaluation to fit the nightly window
+
+A manual run of the registry scan was cancelled by GitHub Actions after 6h.
+The scan is ~25k sequential per-version rule evaluations, dominated by
+MCP-STATIC-007's synchronous npm-provenance HTTP round-trip — I/O-bound and
+a poor fit for a single-threaded loop. `run_scan` still builds each
+`ServerConfig` and writes `Scan`/`Finding` rows on the caller's session
+(SQLAlchemy Sessions aren't thread-safe), but fans the pure `evaluate()`
+calls out across a `ThreadPoolExecutor` (`--workers`, default 16).
+
 ### fix: registry poller now retries transient network errors
 
 The first real run of `nightly-registry-scan` in CI died 35 minutes in with
