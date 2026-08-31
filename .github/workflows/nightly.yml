@@ -36,3 +36,20 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: site
           command: pages deploy out --project-name=mcphound --branch=main
+      - name: Notify on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          EXISTING=$(gh issue list --repo "${{ github.repository }}" \
+            --label nightly-scan-failure --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "${{ github.repository }}" \
+              --body "Nightly registry scan failed again: $RUN_URL"
+          else
+            gh issue create --repo "${{ github.repository }}" \
+              --title "Nightly registry scan failed" \
+              --label nightly-scan-failure \
+              --body $'The scheduled nightly-registry-scan workflow failed: '"$RUN_URL"$'\n\nThis issue stays open and gets a new comment on each subsequent failure; close it once the underlying cause is fixed.'
+          fi
