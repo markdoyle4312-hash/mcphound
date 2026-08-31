@@ -13,6 +13,8 @@ on:
 jobs:
   green:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - name: Run action against the clean fixture
@@ -24,6 +26,8 @@ jobs:
 
   red:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - name: Run action against the violating fixture

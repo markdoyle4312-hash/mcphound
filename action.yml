@@ -3,7 +3,7 @@ description: "Enforce mcp-policy.yaml against this repo's MCP server configs on 
 inputs:
   version:
     description: 'Pinned mcphound version to run'
-    default: '0.1.4'
+    default: '0.1.5'
   config-path:
     description: 'Explicit config file path; defaults to auto-discovery (--self)'
     default: ''

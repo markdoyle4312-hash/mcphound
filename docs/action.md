@@ -31,7 +31,7 @@ whether any MCP config changed.
 
 | Input | Default | Description |
 |---|---|---|
-| `version` | `0.1.4` | Pinned mcphound version to run. Bump deliberately — never left at a floating "latest". |
+| `version` | `0.1.5` | Pinned mcphound version to run. Bump deliberately — never left at a floating "latest". |
 | `config-path` | *(empty)* | Explicit config file path. Empty means auto-discovery of this repo's own configs (`--self`). |
 | `policy-path` | `mcp-policy.yaml` | Path to the policy file. |
 | `baseline-path` | `mcp-policy-baseline.json` | Path to the findings baseline. |
