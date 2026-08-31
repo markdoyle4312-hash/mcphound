@@ -55,6 +55,30 @@ def extract_command_package(server: ServerConfig) -> str | None:
     return None
 
 
+def _package_version(spec: str) -> str | None:
+    """The version portion of an npm-style package spec, or None if the
+    spec has no "@version" suffix (mirrors `_package_name`'s parsing of
+    the same spec, returning the other half)."""
+    name = _package_name(spec)
+    if len(spec) == len(name):
+        return None
+    return spec[len(name) + 1 :]  # skip the "@" separator
+
+
+def extract_command_version(server: ServerConfig) -> str | None:
+    """The version pinned in an npx/uvx-launched package spec — the part
+    `extract_command_package` strips off. None if there's no npx/uvx
+    launch, or the package spec has no version pinned."""
+    tokens = server.command
+    for i, tok in enumerate(tokens):
+        if tok in ("npx", "uvx"):
+            for cand in tokens[i + 1 :]:
+                if cand.startswith("-"):
+                    continue
+                return _package_version(cand)
+    return None
+
+
 def nearest_match(
     pkg: str, reference: tuple[str, ...], max_distance: int
 ) -> tuple[str, int] | None:

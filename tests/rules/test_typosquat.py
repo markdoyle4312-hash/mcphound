@@ -3,6 +3,7 @@ from __future__ import annotations
 from mcphound.models import ServerConfig
 from mcphound.rules.typosquat import (
     extract_command_package,
+    extract_command_version,
     load_reference_list,
     nearest_match,
     neighbors_of,
@@ -28,6 +29,22 @@ def test_extract_command_package_returns_none_for_non_npx_uvx_launchers():
 
 def test_extract_command_package_returns_none_with_no_command():
     assert extract_command_package(_server([])) is None
+
+
+def test_extract_command_version_from_npx_scoped_package():
+    assert extract_command_version(_server(["npx", "-y", "@acme/tool@1.0.0"])) == "1.0.0"
+
+
+def test_extract_command_version_from_uvx_unscoped_package():
+    assert extract_command_version(_server(["uvx", "acme-tool@2.3.1"])) == "2.3.1"
+
+
+def test_extract_command_version_returns_none_when_unpinned():
+    assert extract_command_version(_server(["npx", "-y", "@acme/tool"])) is None
+
+
+def test_extract_command_version_returns_none_for_non_npx_uvx_launchers():
+    assert extract_command_version(_server(["docker", "run", "ghcr.io/acme/tool:1.0.0"])) is None
 
 
 def test_load_reference_list_reads_the_bundled_known_servers_list():
