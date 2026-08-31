@@ -214,3 +214,25 @@ def check_findings(
                 )
             )
     return violations
+
+
+def render_markdown(
+    violations: list[PolicyViolation], server_count: int, policy_path: Path
+) -> str:
+    lines = [
+        "## mcphound allowlist check",
+        "",
+        f"Checked {server_count} server(s) against `{policy_path}`.",
+        "",
+    ]
+    if not violations:
+        lines.append("No violations.")
+        return "\n".join(lines) + "\n"
+    lines.append(f"**{len(violations)} violation(s):**")
+    lines.append("")
+    lines.append("| Kind | Server | Detail |")
+    lines.append("|---|---|---|")
+    for v in violations:
+        server = f"`{v.server}`" if v.server else "-"
+        lines.append(f"| {v.kind} | {server} | {v.detail} |")
+    return "\n".join(lines) + "\n"

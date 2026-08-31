@@ -424,6 +424,37 @@ def test_allowlist_enforce_flags_new_unlisted_server(tmp_path, monkeypatch):
     assert not any(v["kind"] == "finding" for v in violations)
 
 
+def test_allowlist_enforce_json_and_markdown_together_errors(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "mcp-policy.yaml").write_text("mode: strict\n", encoding="utf-8")
+    runner = CliRunner()
+    result = runner.invoke(app, ["allowlist", "enforce", "--json", "--markdown"])
+    assert result.exit_code == 2
+    assert "--markdown" in result.output
+
+
+def test_allowlist_enforce_markdown_output(tmp_path, monkeypatch):
+    from mcphound.discovery import clients as discovery_clients
+
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setattr(discovery_clients, "HOME", fake_home)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".mcp.json").write_text(
+        (FIXTURES / "static" / "MCP-STATIC-001" / "mcp-malicious.json").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+    assert runner.invoke(app, ["allowlist", "init"]).exit_code == 0
+
+    result = runner.invoke(app, ["allowlist", "enforce", "--markdown"])
+    assert result.exit_code == 0
+    assert "## mcphound allowlist check" in result.stdout
+    assert "No violations." in result.stdout
+
+
 def test_registry_export_defaults_out_dir_from_config(monkeypatch, tmp_path):
     from mcphound import cli as cli_module
 

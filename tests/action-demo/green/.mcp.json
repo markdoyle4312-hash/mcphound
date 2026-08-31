@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tool-a": {
+      "command": "npx",
+      "args": ["-y", "@acme/tool-a@1.0.0"]
+    }
+  }
+}

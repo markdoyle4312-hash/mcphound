@@ -1,0 +1,47 @@
+name: Test action.yml
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'action.yml'
+      - 'tests/action-demo/**'
+      - '.github/workflows/test-action.yml'
+  workflow_dispatch: {}
+
+jobs:
+  green:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run action against the clean fixture
+        uses: ./
+        with:
+          config-path: tests/action-demo/green/.mcp.json
+          policy-path: tests/action-demo/green/mcp-policy.yaml
+          baseline-path: tests/action-demo/green/mcp-policy-baseline.json
+
+  red:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run action against the violating fixture
+        id: run-red
+        continue-on-error: true
+        uses: ./
+        with:
+          config-path: tests/action-demo/red/.mcp.json
+          policy-path: tests/action-demo/red/mcp-policy.yaml
+          baseline-path: tests/action-demo/red/mcp-policy-baseline.json
+      - name: Assert the action correctly failed
+        run: |
+          if [ "${{ steps.run-red.outcome }}" != "failure" ]; then
+            echo "Expected the red fixture to fail the action, but it reported: ${{ steps.run-red.outcome }}"
+            exit 1
+          fi
+          echo "Red fixture correctly failed the action."

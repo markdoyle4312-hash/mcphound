@@ -64,6 +64,12 @@ Declares which MCP servers a repo expects and enforces it — `mode: baseline`
 (the `init` default) only fails on *new* findings, not ones already present
 when the baseline was written. See [docs/policy.md](docs/policy.md).
 
+## GitHub Action
+
+Enforces `mcp-policy.yaml` on every pull request — posts a sticky risk
+report comment and fails the check on a violation. See
+[docs/action.md](docs/action.md) for setup.
+
 ## Registry poller (local, opt-in)
 
 Ingests the official MCP Registry into a local Postgres database for future

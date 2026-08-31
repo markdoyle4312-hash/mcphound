@@ -1,0 +1,6 @@
+mode: strict
+fail_on: medium
+blocked_registries: []
+servers:
+  - name: "@acme/tool-a"
+    version: "1.0.0"

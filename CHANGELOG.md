@@ -6,6 +6,18 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### feat: add the mcphound GitHub Action (W19)
+
+`action.yml` at the repo root enforces `mcp-policy.yaml` on every pull
+request: skips silently when a PR touches no MCP config file, posts a
+sticky comment suggesting `mcphound allowlist init` when no policy exists
+yet, otherwise runs `mcphound allowlist enforce --markdown` via `uvx` and
+posts the result as a sticky PR comment, failing the check on any
+violation. Third-party actions are pinned by commit SHA. Adds a
+`--markdown` output mode to `mcphound allowlist enforce` and
+`render_markdown()` in `policy.py` to produce it. Not yet published to the
+GitHub Marketplace — see `docs/action.md`.
+
 ### feat: add mcp-policy.yaml allowlist enforcement (`allowlist init`/`enforce`)
 
 Lets a repo declare which MCP servers it expects and enforce it in CI.
