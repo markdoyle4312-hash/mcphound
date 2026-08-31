@@ -127,6 +127,13 @@ def _evaluate_npm_provenance(server: ServerConfig, rule: dict, detect: dict) -> 
         # Network error or unknown package: no data to judge on, so no finding —
         # never let a provenance check fail closed against an offline/rate-limited registry.
         return []
+    if "unpublished" in meta.get("time", {}):
+        # npm's tombstone record for a fully unpublished package: no "dist-tags"/
+        # "versions", just a "time.unpublished" marker. Distinct from — and a
+        # stronger signal than — a live package that simply never set "repository":
+        # the server's own launch command now points at nothing.
+        detail = f'npm package "{pkg}" has been unpublished/removed from the npm registry'
+        return [_make_finding(rule, server, detail)]
     latest = meta.get("dist-tags", {}).get("latest")
     version_info = meta.get("versions", {}).get(latest, {}) if latest else {}
     repo = version_info.get("repository") or meta.get("repository")
