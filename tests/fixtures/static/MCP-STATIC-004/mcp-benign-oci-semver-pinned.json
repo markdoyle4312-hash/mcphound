@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPHOUND-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/trusted/mcp-server:1.4.2"]
+    }
+  }
+}

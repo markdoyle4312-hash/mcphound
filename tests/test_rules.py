@@ -61,6 +61,26 @@ def test_unpinned_version_rule_allows_uv_run_with_pinned():
     assert "MCP-STATIC-004" not in _finding_ids(fixture, "MCP-STATIC-004")
 
 
+def test_unpinned_version_rule_fires_on_oci_floating_tag():
+    fixture = "mcp-malicious-oci-floating-tag.json"
+    assert "MCP-STATIC-004" in _finding_ids(fixture, "MCP-STATIC-004")
+
+
+def test_unpinned_version_rule_allows_oci_semver_pinned_tag():
+    fixture = "mcp-benign-oci-semver-pinned.json"
+    assert "MCP-STATIC-004" not in _finding_ids(fixture, "MCP-STATIC-004")
+
+
+def test_unpinned_version_rule_fires_on_oci_no_tag():
+    fixture = "mcp-malicious-oci-no-tag.json"
+    assert "MCP-STATIC-004" in _finding_ids(fixture, "MCP-STATIC-004")
+
+
+def test_unpinned_version_rule_allows_oci_digest_pinned():
+    fixture = "mcp-benign-oci-digest-pinned.json"
+    assert "MCP-STATIC-004" not in _finding_ids(fixture, "MCP-STATIC-004")
+
+
 def test_description_injection_rule_fires_on_hidden_comment_and_zero_width():
     assert "MCP-STATIC-005" in _finding_ids("mcp-malicious.json", "MCP-STATIC-005")
 

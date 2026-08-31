@@ -23,6 +23,14 @@ Static rules only at this stage. A rule's `detect` block is one of two shapes:
     type: npm_provenance
     target: command                        (only npx-launched packages are checked)
 
+A rule may also set `also: oci_pin` alongside its primary `pattern`/`type` — a
+secondary check, run only when the primary one found nothing, for launch
+commands the primary shape can't express. Today the only such check is
+unpinned `docker run <image>` references (no regex can safely tell a docker
+flag from an image name across arbitrary `docker run` invocations, so this
+gets real parsing rather than a pattern):
+    also: oci_pin                          (in addition to `pattern`)
+
 One finding per rule per server (first match wins).
 """
 
@@ -116,6 +124,63 @@ def _fetch_npm_metadata(pkg: str) -> dict | None:
     return None
 
 
+# Flags that take a following value token, so it isn't mistaken for the image
+# reference (e.g. "docker run -e KEY=VAL image:tag" — "KEY=VAL" isn't the image).
+# Not exhaustive — covers common `docker run` flags likely on an MCP server's
+# launch command; an unrecognized value-taking flag could still be misread as
+# the image, same fail-safe direction as the rest of this rule (a missed image
+# just means no finding, never a wrong one).
+_OCI_VALUE_FLAGS = {
+    "-e", "--env", "--env-file", "-p", "--publish", "-v", "--volume", "--name",
+    "-w", "--workdir", "--network", "--entrypoint", "-u", "--user", "--mount",
+    "-l", "--label", "--hostname", "-m", "--memory", "--cpus", "--restart",
+    "--platform",
+}
+
+# A tag that looks like an actual version — same "pinned enough" bar this
+# codebase already applies to npm/pypi `pkg@1.2.3` specs, not true digest
+# immutability. Anything else (no tag, "latest", or a floating label like
+# "mcp"/"stable"/"main") is treated as unpinned.
+_SEMVER_TAG = re.compile(r"^v?\d+(\.\d+){0,2}$")
+
+
+def _oci_image_ref(command: list[str]) -> str | None:
+    """First non-flag token after a `docker run` in a command list, skipping
+    flags (and their values, for flags known to take one). Returns None if
+    there's no `docker run` or nothing but flags follow it."""
+    for i, token in enumerate(command):
+        if token != "docker" or i + 1 >= len(command) or command[i + 1] != "run":
+            continue
+        j = i + 2
+        while j < len(command):
+            candidate = command[j]
+            if not candidate.startswith("-"):
+                return candidate
+            flag = candidate.split("=", 1)[0]
+            j += 1
+            if "=" not in candidate and flag in _OCI_VALUE_FLAGS:
+                j += 1
+        return None
+    return None
+
+
+def _evaluate_oci_pin(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
+    ref = _oci_image_ref(server.command)
+    if not ref:
+        return []
+    if "@sha256:" in ref:
+        return []  # digest-pinned: immutable regardless of any tag alongside it
+    last_segment = ref.rsplit("/", 1)[-1]  # avoid a registry host's ":port" prefix
+    if ":" not in last_segment:
+        detail = f'docker image "{ref}" has no tag pinned (defaults to ":latest")'
+        return [_make_finding(rule, server, detail)]
+    tag = last_segment.rsplit(":", 1)[1]
+    if _SEMVER_TAG.match(tag):
+        return []
+    detail = f'docker image "{ref}" uses floating tag ":{tag}", not a pinned version or digest'
+    return [_make_finding(rule, server, detail)]
+
+
 def _evaluate_npm_provenance(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
     if "npx" not in server.command:
         return []
@@ -151,9 +216,12 @@ def evaluate(server: ServerConfig, rules: list[dict]) -> list[Finding]:
         detect = rule.get("detect") or {}
         detect_type = detect.get("type")
         if detect_type == "typosquat":
-            findings.extend(_evaluate_typosquat(server, rule, detect))
+            rule_findings = _evaluate_typosquat(server, rule, detect)
         elif detect_type == "npm_provenance":
-            findings.extend(_evaluate_npm_provenance(server, rule, detect))
+            rule_findings = _evaluate_npm_provenance(server, rule, detect)
         else:
-            findings.extend(_evaluate_regex(server, rule, detect))
+            rule_findings = _evaluate_regex(server, rule, detect)
+        if not rule_findings and detect.get("also") == "oci_pin":
+            rule_findings = _evaluate_oci_pin(server, rule, detect)
+        findings.extend(rule_findings)
     return findings
