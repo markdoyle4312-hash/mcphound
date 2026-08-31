@@ -144,7 +144,7 @@ _OCI_VALUE_FLAGS = {
 _SEMVER_TAG = re.compile(r"^v?\d+(\.\d+){0,2}$")
 
 
-def _oci_image_ref(command: list[str]) -> str | None:
+def oci_image_ref(command: list[str]) -> str | None:
     """First non-flag token after a `docker run` in a command list, skipping
     flags (and their values, for flags known to take one). Returns None if
     there's no `docker run` or nothing but flags follow it."""
@@ -165,7 +165,7 @@ def _oci_image_ref(command: list[str]) -> str | None:
 
 
 def _evaluate_oci_pin(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
-    ref = _oci_image_ref(server.command)
+    ref = oci_image_ref(server.command)
     if not ref:
         return []
     if "@sha256:" in ref:

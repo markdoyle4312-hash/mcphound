@@ -334,6 +334,96 @@ def test_registry_export_writes_artifacts_without_scanning(monkeypatch, tmp_path
     assert "wrote artifacts for 3 server(s) and 1 typosquat cluster(s)" in result.stdout
 
 
+def test_allowlist_init_writes_policy_and_baseline(tmp_path, monkeypatch):
+    from mcphound.discovery import clients as discovery_clients
+
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setattr(discovery_clients, "HOME", fake_home)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".mcp.json").write_text(
+        (FIXTURES / "static" / "MCP-STATIC-001" / "mcp-malicious.json").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+    result = runner.invoke(app, ["allowlist", "init"])
+    assert result.exit_code == 0
+    assert (tmp_path / "mcp-policy.yaml").exists()
+    assert (tmp_path / "mcp-policy-baseline.json").exists()
+
+
+def test_allowlist_init_refuses_to_overwrite_without_force(tmp_path, monkeypatch):
+    from mcphound.discovery import clients as discovery_clients
+
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setattr(discovery_clients, "HOME", fake_home)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "mcp-policy.yaml").write_text("mode: strict\n", encoding="utf-8")
+    runner = CliRunner()
+    result = runner.invoke(app, ["allowlist", "init"])
+    assert result.exit_code == 1
+    assert "--force" in result.output
+
+
+def test_allowlist_enforce_errors_when_policy_missing(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(app, ["allowlist", "enforce"])
+    assert result.exit_code == 1
+    assert "allowlist init" in result.output
+
+
+def test_allowlist_init_then_enforce_round_trips_clean(tmp_path, monkeypatch):
+    from mcphound.discovery import clients as discovery_clients
+
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setattr(discovery_clients, "HOME", fake_home)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".mcp.json").write_text(
+        (FIXTURES / "static" / "MCP-STATIC-001" / "mcp-malicious.json").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+    assert runner.invoke(app, ["allowlist", "init"]).exit_code == 0
+
+    enforce_result = runner.invoke(app, ["allowlist", "enforce"])
+    assert enforce_result.exit_code == 0
+    assert "No violations." in enforce_result.stdout
+
+
+def test_allowlist_enforce_flags_new_unlisted_server(tmp_path, monkeypatch):
+    from mcphound.discovery import clients as discovery_clients
+
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setattr(discovery_clients, "HOME", fake_home)
+    monkeypatch.chdir(tmp_path)
+    original = json.loads(
+        (FIXTURES / "static" / "MCP-STATIC-001" / "mcp-malicious.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    (tmp_path / ".mcp.json").write_text(json.dumps(original), encoding="utf-8")
+    runner = CliRunner()
+    assert runner.invoke(app, ["allowlist", "init"]).exit_code == 0
+
+    original["mcpServers"]["new-tool"] = {"command": "npx", "args": ["-y", "@acme/new-tool@1.0.0"]}
+    (tmp_path / ".mcp.json").write_text(json.dumps(original), encoding="utf-8")
+
+    result = runner.invoke(app, ["allowlist", "enforce", "--json"])
+    assert result.exit_code == 1
+    violations = json.loads(result.stdout)
+    kinds = {(v["kind"], v["server"]) for v in violations}
+    assert ("unlisted_server", "@acme/new-tool") in kinds
+    assert not any(v["kind"] == "finding" for v in violations)
+
+
 def test_registry_export_defaults_out_dir_from_config(monkeypatch, tmp_path):
     from mcphound import cli as cli_module
 

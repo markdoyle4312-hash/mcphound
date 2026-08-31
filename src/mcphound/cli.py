@@ -9,11 +9,24 @@ from typing import Annotated
 from urllib.parse import quote
 
 import typer
+import yaml
 
 from . import __version__
 from .discovery.clients import discover_configs, load_servers
 from .models import SEVERITY_ORDER, ScanResult
 from .output import to_json, to_sarif
+from .policy import (
+    PolicyError,
+    check_allowlist,
+    check_findings,
+    check_registries,
+    load_baseline,
+    load_policy,
+    resolved_digest,
+    resolved_version,
+    server_identity,
+    write_baseline,
+)
 from .registry.config import load_config
 from .rules.engine import evaluate
 from .rules.loader import load_rules
@@ -231,6 +244,124 @@ def feedback(
         f"?title={quote(title)}&labels={quote('false-positive')}&body={quote(body)}"
     )
     typer.echo(f"Report a false positive for {rule_id}:\n\n{url}")
+
+
+allowlist_app = typer.Typer(help="Manage and enforce an mcp-policy.yaml allowlist.")
+app.add_typer(allowlist_app, name="allowlist")
+
+
+@allowlist_app.command("init")
+def allowlist_init(
+    policy_path: Annotated[
+        Path, typer.Option("--policy", help="Where to write the policy file")
+    ] = Path("mcp-policy.yaml"),
+    baseline_path: Annotated[
+        Path, typer.Option("--baseline", help="Where to write the findings baseline")
+    ] = Path("mcp-policy-baseline.json"),
+    force: Annotated[
+        bool, typer.Option("--force", help="Overwrite existing policy/baseline files")
+    ] = False,
+):
+    """Bootstrap mcp-policy.yaml + a findings baseline from the current scan state."""
+    if not force and (policy_path.exists() or baseline_path.exists()):
+        typer.echo(
+            f"Error: {policy_path} or {baseline_path} already exists. Use --force to overwrite.",
+            err=True,
+        )
+        raise typer.Exit(1)
+    result, _missing = _collect(None)
+    servers_yaml = []
+    for server in result.servers:
+        identity = server_identity(server)
+        entry: dict = {"name": identity}
+        digest = resolved_digest(server)
+        version = resolved_version(server)
+        if digest:
+            entry["digest"] = digest
+        elif version:
+            entry["version"] = version
+        servers_yaml.append(entry)
+    policy_data = {
+        "mode": "baseline",
+        "fail_on": "medium",
+        "blocked_registries": [],
+        "servers": servers_yaml,
+    }
+    policy_path.write_text(yaml.safe_dump(policy_data, sort_keys=False), encoding="utf-8")
+    write_baseline(baseline_path, result.findings)
+    typer.echo(
+        f"Wrote {policy_path} ({len(servers_yaml)} server(s)) and {baseline_path} "
+        f"({len(result.findings)} finding(s) baselined)."
+    )
+
+
+@allowlist_app.command("enforce")
+def allowlist_enforce(
+    config: Annotated[
+        list[Path] | None, typer.Argument(help="Config file(s); defaults to auto-discovery")
+    ] = None,
+    policy_path: Annotated[
+        Path, typer.Option("--policy", help="Path to the policy file")
+    ] = Path("mcp-policy.yaml"),
+    baseline_path: Annotated[
+        Path, typer.Option("--baseline", help="Path to the findings baseline")
+    ] = Path("mcp-policy-baseline.json"),
+    as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON output")] = False,
+    self_: Annotated[
+        bool,
+        typer.Option("--self", help="Only enforce against this project's own configs"),
+    ] = False,
+    deep: Annotated[
+        bool, typer.Option("--deep", help="Also run network-dependent checks")
+    ] = False,
+    output: Annotated[
+        Path | None,
+        typer.Option("-o", "--output", help="Write output to this file instead of stdout"),
+    ] = None,
+):
+    """Enforce mcp-policy.yaml against the current scan state."""
+    if self_ and config is not None:
+        typer.echo("Error: --self can't be combined with explicit config file(s).", err=True)
+        raise typer.Exit(2)
+    if not policy_path.exists():
+        typer.echo(
+            f"Error: {policy_path} not found. Run `mcphound allowlist init` first.", err=True
+        )
+        raise typer.Exit(1)
+    try:
+        policy = load_policy(policy_path)
+    except PolicyError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    result, missing = _collect(config, deep=deep, project_only=self_)
+    for p in missing:
+        typer.echo(f"Warning: config file not found: {p}", err=True)
+
+    baseline = load_baseline(baseline_path)
+    violations = (
+        check_allowlist(result.servers, policy)
+        + check_registries(result.servers, policy)
+        + check_findings(result.findings, policy, baseline)
+    )
+
+    if as_json:
+        text = json.dumps([v.model_dump() for v in violations], indent=2)
+    else:
+        lines = [f"Checked {len(result.servers)} server(s) against {policy_path}."]
+        for v in violations:
+            lines.append(f"  [{v.kind:<16}] {v.server or '-':<24} {v.detail}")
+        if not violations:
+            lines.append("  No violations.")
+        text = "\n".join(lines)
+
+    if output:
+        output.write_text(text + "\n", encoding="utf-8")
+    else:
+        typer.echo(text)
+
+    if missing or violations:
+        raise typer.Exit(1)
 
 
 @app.command(name="registry-poll")
