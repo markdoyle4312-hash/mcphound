@@ -87,9 +87,9 @@ References:
 - Network-dependent: no
 - Detection: Regex against `command`
 
-An npx/uvx launch command references a package with no version pin (or the mutable "@latest" tag). The exact code that runs can change between invocations without review — the same rug-pull risk class as unsigned install scripts, just via registry mutation instead of a script.
+An npx/uvx launch command references a package with no version pin (or the mutable "@latest" tag), or a "docker run" launch command references an image with no tag (implicit ":latest") or a floating, non-semver tag. The exact code that runs can change between invocations without review — the same rug-pull risk class as unsigned install scripts, just via registry mutation instead of a script. A digest-pinned image ("@sha256:...") or an explicit numeric version tag is not flagged.
 
-**Recommendation:** Pin an exact version, e.g. "npx -y pkg@1.2.3"; bump deliberately and note the bump in the commit message.
+**Recommendation:** Pin an exact version, e.g. "npx -y pkg@1.2.3" or "docker run image:1.2.3" (or "image@sha256:..." for a digest pin); bump deliberately and note the bump in the commit message.
 
 References:
 - https://labs.cloudsecurityalliance.org/research/csa-research-note-mcp-tool-poisoning-auto-execution-20260701/
