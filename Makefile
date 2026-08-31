@@ -1,4 +1,4 @@
-.PHONY: install test lint format scan-self fixtures docs docs-check db-up db-migrate registry-poll registry-scan
+.PHONY: install test lint typecheck format scan-self fixtures docs docs-check db-up db-migrate registry-poll registry-scan
 
 install:
 	uv sync --extra dev
@@ -8,6 +8,10 @@ test:
 
 lint:
 	uv run ruff check .
+
+# Extras included so sqlalchemy/fastapi-backed modules (registry/, api/) type-check too.
+typecheck:
+	uv run --extra dev --extra registry --extra api mypy src/mcphound
 
 format:
 	uv run ruff format .

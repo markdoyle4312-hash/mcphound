@@ -18,6 +18,8 @@ jobs:
         run: uv sync --all-extras
       - name: Lint
         run: uv run ruff check .
+      - name: Type check
+        run: uv run mypy src/mcphound
       - name: Tests
         run: uv run pytest -q
       - name: SARIF output smoke test

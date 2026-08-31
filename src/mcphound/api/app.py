@@ -36,7 +36,10 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="mcphound API", version="1")
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(
+    RateLimitExceeded,
+    _rate_limit_exceeded_handler,  # type: ignore[arg-type]  # slowapi's handler is typed narrower than Starlette's
+)
 
 
 def get_db() -> Iterator[Session]:

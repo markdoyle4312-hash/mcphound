@@ -19,3 +19,10 @@ repos:
         entry: scripts/self-scan.sh
         files: '(\.mcp\.json|opencode\.jsonc?|\.claude/settings\.json)$'
         pass_filenames: false
+
+      - id: mypy
+        name: mypy (src/mcphound)
+        language: system
+        entry: uv run --extra dev --extra registry --extra api mypy src/mcphound
+        files: '^src/mcphound/.*\.py$'
+        pass_filenames: false
