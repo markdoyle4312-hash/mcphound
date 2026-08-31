@@ -33,6 +33,18 @@ class Finding(BaseModel):
     recommendation: str = ""
 
 
+class PolicyViolation(BaseModel):
+    """One mcp-policy.yaml enforcement failure. `kind` is one of
+    "unlisted_server", "version_drift", "blocked_registry", or "finding" —
+    see docs/policy.md for what each means."""
+
+    kind: str
+    server: str | None = None
+    rule_id: str | None = None
+    severity: str
+    detail: str = ""
+
+
 class ScanResult(BaseModel):
     targets: list[str] = Field(default_factory=list)
     servers: list[ServerConfig] = Field(default_factory=list)
