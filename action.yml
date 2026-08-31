@@ -1,0 +1,128 @@
+name: 'mcphound Allowlist Check'
+description: "Enforce mcp-policy.yaml against this repo's MCP server configs on every PR."
+inputs:
+  version:
+    description: 'Pinned mcphound version to run'
+    default: '0.1.4'
+  config-path:
+    description: 'Explicit config file path; defaults to auto-discovery (--self)'
+    default: ''
+  policy-path:
+    description: 'Path to mcp-policy.yaml'
+    default: 'mcp-policy.yaml'
+  baseline-path:
+    description: 'Path to the findings baseline'
+    default: 'mcp-policy-baseline.json'
+  github-token:
+    description: 'Token used to post the PR comment'
+    default: ${{ github.token }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Check for relevant changes
+      id: relevant
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" != "pull_request" ]; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        BASE_SHA="${{ github.event.pull_request.base.sha }}"
+        HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+        if ! git fetch --no-tags --depth=50 origin "$BASE_SHA" 2>/dev/null; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"  # can't determine the diff; fail safe and run the check
+          exit 0
+        fi
+        CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" 2>/dev/null) || {
+          echo "changed=true" >> "$GITHUB_OUTPUT"  # can't determine the diff; fail safe and run the check
+          exit 0
+        }
+        if [ -n "${{ inputs.config-path }}" ]; then
+          PATTERNS="${{ inputs.config-path }} ${{ inputs.policy-path }} ${{ inputs.baseline-path }}"
+        else
+          PATTERNS=".mcp.json opencode.json opencode.jsonc ${{ inputs.policy-path }} ${{ inputs.baseline-path }}"
+        fi
+        MATCH="false"
+        for f in $CHANGED_FILES; do
+          for p in $PATTERNS; do
+            if [ "$f" = "$p" ]; then
+              MATCH="true"
+            fi
+          done
+        done
+        echo "changed=$MATCH" >> "$GITHUB_OUTPUT"
+
+    - name: Check for policy file
+      id: policy
+      if: steps.relevant.outputs.changed == 'true'
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.policy-path }}" ]; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Suggest allowlist init
+      if: >
+        steps.relevant.outputs.changed == 'true' &&
+        steps.policy.outputs.exists == 'false' &&
+        github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+      with:
+        header: mcphound-allowlist-check
+        message: |
+          No `mcp-policy.yaml` found at `${{ inputs.policy-path }}`. Run `mcphound allowlist init` to start enforcing an allowlist on this repo.
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+
+    - name: Set up uv
+      if: steps.relevant.outputs.changed == 'true' && steps.policy.outputs.exists == 'true'
+      uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+
+    - name: Run allowlist enforce
+      id: enforce
+      if: steps.relevant.outputs.changed == 'true' && steps.policy.outputs.exists == 'true'
+      shell: bash
+      run: |
+        set +e
+        if [ -n "${{ inputs.config-path }}" ]; then
+          uvx --from "mcphound==${{ inputs.version }}" mcphound allowlist enforce \
+            --policy "${{ inputs.policy-path }}" --baseline "${{ inputs.baseline-path }}" \
+            --markdown -o report.md "${{ inputs.config-path }}"
+        else
+          uvx --from "mcphound==${{ inputs.version }}" mcphound allowlist enforce \
+            --policy "${{ inputs.policy-path }}" --baseline "${{ inputs.baseline-path }}" \
+            --self --markdown -o report.md
+        fi
+        echo "exit-code=$?" >> "$GITHUB_OUTPUT"
+        set -e
+
+    - name: Post report
+      if: >
+        steps.relevant.outputs.changed == 'true' &&
+        steps.policy.outputs.exists == 'true' &&
+        hashFiles('report.md') != '' &&
+        github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+      with:
+        header: mcphound-allowlist-check
+        path: report.md
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+
+    - name: Post generic failure notice
+      if: >
+        steps.relevant.outputs.changed == 'true' &&
+        steps.policy.outputs.exists == 'true' &&
+        hashFiles('report.md') == '' &&
+        github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+      with:
+        header: mcphound-allowlist-check
+        message: |
+          mcphound failed to produce a report — see the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+
+    - name: Fail on violations
+      if: steps.relevant.outputs.changed == 'true' && steps.policy.outputs.exists == 'true'
+      shell: bash
+      run: exit ${{ steps.enforce.outputs.exit-code }}
