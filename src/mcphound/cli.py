@@ -30,7 +30,7 @@ from .policy import (
 )
 from .registry.config import load_config
 from .rules.engine import evaluate
-from .rules.loader import load_rules
+from .rules.loader import load_rules, rules_fingerprint
 
 # `scan`/`inspect`/`feedback` must work with just the base install (no
 # sqlalchemy/psycopg) — CHANGELOG.md: "kept out of the core install so
@@ -433,11 +433,14 @@ def registry_scan(
     _enable_progress_logging()
     cfg = load_config(config_path)
     rules = load_rules()
+    # Staleness key for the incremental rescan: content-addressed on the rule
+    # set, not __version__ — see rules_fingerprint()'s docstring for why.
+    scan_fingerprint = rules_fingerprint(rules)
     out_dir = out or Path(cfg.artifacts_dir)
     session = get_session_factory()()
     try:
-        scan_summary = run_scan(session, rules, __version__, max_workers=workers)
-        score_summary = run_scoring(session, __version__)
+        scan_summary = run_scan(session, rules, scan_fingerprint, max_workers=workers)
+        score_summary = run_scoring(session, scan_fingerprint)
         if dry_run:
             session.rollback()
             typer.echo(f"[dry-run, rolled back] {scan_summary.format()}; {score_summary.format()}")

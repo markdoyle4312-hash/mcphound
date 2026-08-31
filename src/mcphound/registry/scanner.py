@@ -29,7 +29,12 @@ _SCAN_PROGRESS_INTERVAL = 25
 # thread pool — not more processes — is the right tool; ~25k in-scope versions at
 # one sequential network round-trip apiece is what blew the nightly job past
 # GitHub Actions' 6h job limit.
-DEFAULT_MAX_WORKERS = 16
+# 16 ran the full registry (2026-08-31, run 33365883695) with zero HTTP 429s
+# from registry.npmjs.org, so there was headroom left on the table; doubled to
+# 32 to cut wall time further. _fetch_npm_metadata() still fails open with
+# bounded 429 retries (engine.py) if this turns out to be too aggressive —
+# revisit if a future run's logs show rate-limit backoffs kicking in.
+DEFAULT_MAX_WORKERS = 32
 
 
 @dataclass

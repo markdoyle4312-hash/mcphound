@@ -152,6 +152,15 @@ never diverge in shape.
 mirroring the `hashes` ledger style so a server's score history is queryable
 without recomputing it. Populated by `registry-scan`'s scoring pass.
 
+Despite the column name, `mcphound_version` on both tables holds a rule-set
+content fingerprint (`rules_fingerprint()` in `rules/loader.py`, e.g.
+`rules-8f19a2c3d4e5f601`), not the literal `mcphound.__version__` string. The
+scan pipeline uses it as the incremental-rescan staleness key, and keying it
+to the package version instead forced a full ~25k-version rescan on every
+release regardless of whether detection logic actually changed — including
+docs/CI/packaging-only releases, which this project ships several of a day
+pre-1.0. See the docstring on `rules_fingerprint()` for the full reasoning.
+
 **Delisting is soft, not a `DELETE`.** Each run stamps `last_seen_at` on
 everything it touches, then mark-and-sweeps: anything with `last_seen_at`
 older than the run's start gets `delisted_at` set (and cleared again if it
