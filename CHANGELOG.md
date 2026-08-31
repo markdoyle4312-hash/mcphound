@@ -6,6 +6,24 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### fix: MCP-STATIC-007 misleading finding message (#17)
+
+Message said "no repository field" even when the real condition was a fully
+unpublished package (3/31 sampled cases in the W16 spot-check).
+
+### fix: key registry-scan staleness off rule content, not package version (#18)
+
+### fix: migrate nightly site deploy from Vercel to Cloudflare Pages
+
+The nightly `nightly-registry-scan` job's `vercel deploy --prod` started
+failing: `output: "export"` plus `generateStaticParams()` over the full
+registry index produces one route per scanned server (~28k+ at current
+registry size), well past Vercel's 2,048-routes-per-deployment cap. Moved
+the deploy step to `wrangler pages deploy` against a Cloudflare Pages
+project (`mcphound`), which has no comparable route cap for a static
+export. `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` repo secrets
+replaced by `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`.
+
 ## [0.1.5] — 2026-08-31
 
 Note: this is the first published release containing `mcphound allowlist

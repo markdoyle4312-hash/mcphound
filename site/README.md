@@ -34,23 +34,26 @@ npm run build    # static export to out/
 
 ## Deployment
 
-This site deploys to Vercel via the Vercel CLI from the nightly CI job
-(`nightly-registry-scan` in `.github/workflows/nightly.yml`), not via a
-git-triggered Vercel build — the export step needs live Postgres access,
+This site deploys to Cloudflare Pages via `wrangler pages deploy` from the
+nightly CI job (`nightly-registry-scan` in `.github/workflows/nightly.yml`),
+not via a git-triggered build — the export step needs live Postgres access,
 which only the CI runner has, and `data/` is never committed.
 
-The Vercel project's GitHub Git integration is intentionally disconnected
-(`vercel git disconnect`) — left connected, it auto-builds a preview on
-every push from the repo root (wrong Root Directory) with no `site/data`
-present, which can only ever fail. Don't reconnect it without also fixing
-Root Directory and giving the build a sample-data fallback.
+It moved off Vercel because `output: "export"` plus `generateStaticParams()`
+over the full registry index produces one route per scanned server
+(~28k+ at current registry size), which blows well past Vercel's
+2,048-routes-per-deployment cap. Cloudflare Pages has no comparable route
+cap for a static export, and the site was already pure static output with
+no serverless/edge functions to lose.
 
-The project is linked (Vercel project `marksit/site`) and the CI job runs
-daily (`0 18 * * *` UTC): poll the registry → scan → export to `site/data`
-→ `npm ci` → build and deploy to Vercel production, all against a hosted
-Neon Postgres instance (`MCPHOUND_DATABASE_URL` repo secret). Repo secrets
-in use: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`,
-`MCPHOUND_DATABASE_URL`.
+The Cloudflare Pages project (`mcphound`) was created once via the
+dashboard/`wrangler pages project create` — the nightly job only ever
+deploys to it, it doesn't create it. The CI job runs daily (`0 18 * * *`
+UTC): poll the registry → scan → export to `site/data` → `npm ci` →
+`npm run build` (static export to `out/`) → `wrangler pages deploy`, all
+against a hosted Neon Postgres instance (`MCPHOUND_DATABASE_URL` repo
+secret). Repo secrets in use: `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID`, `MCPHOUND_DATABASE_URL`.
 
 The `site-build` CI job (against sample data, on every push/PR) is a
 separate, faster smoke test — it doesn't deploy anything.

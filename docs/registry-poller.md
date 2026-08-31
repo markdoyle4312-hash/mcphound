@@ -25,7 +25,7 @@ and never creates duplicate rows.
 There's no built-in scheduler — this is a plain CLI command. In production,
 `.github/workflows/nightly.yml`'s `nightly-registry-scan` job runs it on a
 daily cron against a hosted Neon Postgres instance (`MCPHOUND_DATABASE_URL`
-repo secret), then exports and deploys the site to Vercel. For local/manual
+repo secret), then exports and deploys the site to Cloudflare Pages. For local/manual
 scheduling instead, use whatever mechanism your OS already has:
 
 **Unix (cron):** add a line to `crontab -e` (adjust the path and DSN):
