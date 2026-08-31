@@ -89,9 +89,14 @@ reference and how to run it locally.
 uv sync --extra dev
 uv run pytest -q          # tests
 uv run ruff check .       # lint
+make typecheck            # mypy over src/mcphound
 make scan-self            # scan this repo's own agent configs (dogfood)
 make docs                 # regenerate docs/rules.md from the rule YAML files
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full PR process and
+[GOVERNANCE.md](GOVERNANCE.md) for how detection rules get reviewed. This
+project follows a [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Safety
 
