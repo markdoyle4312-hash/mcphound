@@ -22,6 +22,7 @@ from .policy import (
     check_registries,
     load_baseline,
     load_policy,
+    render_markdown,
     resolved_digest,
     resolved_version,
     server_identity,
@@ -307,6 +308,9 @@ def allowlist_enforce(
         Path, typer.Option("--baseline", help="Path to the findings baseline")
     ] = Path("mcp-policy-baseline.json"),
     as_json: Annotated[bool, typer.Option("--json", help="Machine-readable JSON output")] = False,
+    markdown: Annotated[
+        bool, typer.Option("--markdown", help="Markdown output (for PR comments)")
+    ] = False,
     self_: Annotated[
         bool,
         typer.Option("--self", help="Only enforce against this project's own configs"),
@@ -320,6 +324,9 @@ def allowlist_enforce(
     ] = None,
 ):
     """Enforce mcp-policy.yaml against the current scan state."""
+    if as_json and markdown:
+        typer.echo("Error: --json and --markdown can't be combined.", err=True)
+        raise typer.Exit(2)
     if self_ and config is not None:
         typer.echo("Error: --self can't be combined with explicit config file(s).", err=True)
         raise typer.Exit(2)
@@ -347,6 +354,8 @@ def allowlist_enforce(
 
     if as_json:
         text = json.dumps([v.model_dump() for v in violations], indent=2)
+    elif markdown:
+        text = render_markdown(violations, len(result.servers), policy_path)
     else:
         lines = [f"Checked {len(result.servers)} server(s) against {policy_path}."]
         for v in violations:
