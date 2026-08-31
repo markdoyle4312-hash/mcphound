@@ -6,6 +6,21 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### feat: add mcp-policy.yaml allowlist enforcement (`allowlist init`/`enforce`)
+
+Lets a repo declare which MCP servers it expects and enforce it in CI.
+`mcphound allowlist init` bootstraps `mcp-policy.yaml` (every currently
+discovered server, at its resolved version/digest) plus a
+`mcp-policy-baseline.json` snapshot of current findings.
+`mcphound allowlist enforce` then checks two independent things: server
+identity/pin/blocked-registry membership (always enforced) and rule
+findings above `fail_on` (severity-gated, and — in the default `mode:
+baseline` — only *new* findings count, not ones already present at
+`init` time). The baseline mode directly answers issue #5's
+brownfield-adoption complaint: adding this to an existing repo with
+pre-existing findings no longer means a wall of unrelated red on day
+one. See `docs/policy.md`.
+
 ## [0.1.4] — 2026-08-31
 
 ### fix: catch unpinned docker/OCI images in MCP-STATIC-004
