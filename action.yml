@@ -86,11 +86,11 @@ runs:
       run: |
         set +e
         if [ -n "${{ inputs.config-path }}" ]; then
-          uvx --from "mcphound==${{ inputs.version }}" mcphound allowlist enforce \
+          uvx --refresh-package mcphound --from "mcphound==${{ inputs.version }}" mcphound allowlist enforce \
             --policy "${{ inputs.policy-path }}" --baseline "${{ inputs.baseline-path }}" \
             --markdown -o report.md "${{ inputs.config-path }}"
         else
-          uvx --from "mcphound==${{ inputs.version }}" mcphound allowlist enforce \
+          uvx --refresh-package mcphound --from "mcphound==${{ inputs.version }}" mcphound allowlist enforce \
             --policy "${{ inputs.policy-path }}" --baseline "${{ inputs.baseline-path }}" \
             --self --markdown -o report.md
         fi
