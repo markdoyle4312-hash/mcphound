@@ -53,6 +53,17 @@ Prints a pre-filled GitHub issue URL — no network call, no auth. Redact secret
 from any config snippet before pasting it into the issue. See
 [GOVERNANCE.md](GOVERNANCE.md#false-positives) for the full policy.
 
+## Allowlist enforcement
+
+```bash
+mcphound allowlist init      # bootstrap mcp-policy.yaml + a findings baseline
+mcphound allowlist enforce   # fail the build on unlisted servers or new findings
+```
+
+Declares which MCP servers a repo expects and enforces it — `mode: baseline`
+(the `init` default) only fails on *new* findings, not ones already present
+when the baseline was written. See [docs/policy.md](docs/policy.md).
+
 ## Registry poller (local, opt-in)
 
 Ingests the official MCP Registry into a local Postgres database for future
