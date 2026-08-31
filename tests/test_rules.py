@@ -104,6 +104,38 @@ def test_npm_provenance_rule_allows_package_with_repository(monkeypatch):
     assert "MCP-STATIC-007" not in _finding_ids("mcp-benign.json", "MCP-STATIC-007")
 
 
+def test_npm_provenance_rule_distinguishes_unpublished_package(monkeypatch):
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(
+        engine,
+        "_fetch_npm_metadata",
+        lambda pkg: {
+            "name": pkg,
+            "time": {
+                "created": "2026-01-01T00:00:00.000Z",
+                "modified": "2026-08-03T00:00:00.000Z",
+                "unpublished": {
+                    "maintainers": [],
+                    "name": pkg,
+                    "tags": {},
+                    "versions": ["1.0.0"],
+                    "time": "2026-08-03T00:00:00.000Z",
+                },
+            },
+        },
+    )
+    findings = [
+        f
+        for f in evaluate(
+            load_servers(fixture_path("MCP-STATIC-007", "mcp-malicious.json"))[0], RULES
+        )
+        if f.rule_id == "MCP-STATIC-007"
+    ]
+    assert len(findings) == 1
+    assert "unpublished" in findings[0].detail
+
+
 def test_npm_provenance_rule_skips_silently_on_network_failure(monkeypatch):
     from mcphound.rules import engine
 
