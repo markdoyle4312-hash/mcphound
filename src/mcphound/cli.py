@@ -71,6 +71,27 @@ app = typer.Typer(
 FEEDBACK_REPO = "markdoyle4312-hash/mcphound"
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"mcphound {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool | None,
+        typer.Option(
+            "--version",
+            callback=_version_callback,
+            is_eager=True,
+            help="Show the installed mcphound version and exit.",
+        ),
+    ] = None,
+) -> None:
+    pass
+
+
 def _enable_progress_logging() -> None:
     """registry-poll/registry-scan are long-running, network-bound batch jobs
     with no other console feedback — surface their INFO progress logs.
