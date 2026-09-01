@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { pathSegmentsToName } from "@/lib/slug";
 import { shardKey } from "@/lib/shard";
 import type { ServerDetail } from "@/lib/types";
+import { ScoreCascade } from "@/components/ScoreCascade";
+import { SeverityBadge } from "@/components/SeverityBadge";
 
 type State =
   | { status: "loading" }
@@ -45,45 +47,57 @@ export default function ServerPage() {
   }, []);
 
   if (state.status === "loading") {
-    return <p>Loading…</p>;
+    return <p className="font-mono text-sm text-paper-dim">Loading case file…</p>;
   }
   if (state.status === "not-found") {
-    return <p>Server not found.</p>;
+    return <p className="font-mono text-sm text-paper-dim">Server not found.</p>;
   }
   if (state.status === "error") {
-    return <p>Failed to load server data.</p>;
+    return <p className="font-mono text-sm text-sev-high">Failed to load server data.</p>;
   }
 
   const { server } = state;
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1">{server.name}</h1>
-      <p className="text-slate-400 mb-6">
-        Score {server.score} · {server.finding_count} finding
-        {server.finding_count === 1 ? "" : "s"} · last scanned {server.computed_at}
+      <p className="eyebrow mb-3">case file</p>
+      <h1 className="mb-1 break-all font-mono text-2xl font-semibold">{server.name}</h1>
+      <p className="mb-8 font-mono text-xs text-paper-dim">
+        last scanned {server.computed_at.slice(0, 10)}
       </p>
-      {server.findings.length === 0 ? (
-        <p>No findings.</p>
-      ) : (
-        <ul className="space-y-4">
-          {server.findings.map((finding) => (
-            <li key={finding.rule_id} className="border border-slate-800 rounded p-4">
-              <p className="font-semibold">
-                {finding.title}{" "}
-                <span className="text-slate-500 font-normal">
-                  ({finding.rule_id}, {finding.owasp})
-                </span>
-              </p>
-              <p className="text-sm text-slate-400">
-                Severity: {finding.severity} · Confidence: {finding.confidence}
-              </p>
-              <p className="mt-2">{finding.detail}</p>
-              {finding.recommendation && (
-                <p className="mt-2 text-slate-400">{finding.recommendation}</p>
-              )}
-            </li>
-          ))}
-        </ul>
+
+      <div className="mb-10">
+        <ScoreCascade findings={server.findings} />
+      </div>
+
+      {server.findings.length > 0 && (
+        <>
+          <p className="eyebrow mb-3">findings</p>
+          <ul className="space-y-4">
+            {server.findings.map((finding) => (
+              <li key={finding.rule_id} className="border border-ink-700 bg-ink-900 p-5">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <SeverityBadge severity={finding.severity} />
+                  <span className="font-mono text-xs text-paper-dim">
+                    confidence: {finding.confidence}
+                  </span>
+                  <span className="font-mono text-xs text-paper-dim">·</span>
+                  <span className="font-mono text-xs text-paper-dim">{finding.owasp}</span>
+                  <span className="ml-auto font-mono text-xs text-paper-dim">
+                    {finding.rule_id}
+                  </span>
+                </div>
+                <p className="font-semibold text-paper">{finding.title}</p>
+                <p className="mt-2 text-sm text-paper-dim">{finding.detail}</p>
+                {finding.recommendation && (
+                  <p className="mt-3 border-t border-ink-800 pt-3 text-sm text-paper">
+                    {finding.recommendation}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

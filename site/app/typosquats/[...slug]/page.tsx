@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadTyposquatClusters } from "@/lib/data";
 import { nameToPathSegments, pathSegmentsToName, serverHref } from "@/lib/slug";
+import { IdentifierDiff } from "@/components/IdentifierDiff";
 
 export function generateStaticParams() {
   return loadTyposquatClusters().map((cluster) => ({
@@ -23,22 +24,27 @@ export default async function TyposquatDetailPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">{cluster.known_name}</h1>
+      <p className="eyebrow mb-3">known package</p>
+      <h1 className="mb-8 break-all font-mono text-2xl font-semibold">{cluster.known_name}</h1>
+
       {cluster.neighbors.length === 0 ? (
-        <p>No lookalikes found in the current registry snapshot.</p>
+        <p className="text-clear">No lookalikes found in the current registry snapshot.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-4">
           {cluster.neighbors.map((neighbor) => (
-            <li key={neighbor.identifier} className="border border-slate-800 rounded p-4">
-              <p className="font-mono">{neighbor.identifier}</p>
-              <p className="text-sm text-slate-400">
+            <li key={neighbor.identifier} className="border border-ink-700 bg-ink-900 p-5">
+              <IdentifierDiff known={cluster.known_name} lookalike={neighbor.identifier} />
+              <p className="mt-4 border-t border-ink-800 pt-3 font-mono text-xs text-paper-dim">
                 {neighbor.distance} edit{neighbor.distance === 1 ? "" : "s"} away · published as{" "}
                 {neighbor.server_slug ? (
-                  <Link href={serverHref(neighbor.server_name)} className="underline">
+                  <Link
+                    href={serverHref(neighbor.server_name)}
+                    className="text-paper underline hover:text-signal"
+                  >
                     {neighbor.server_name}
                   </Link>
                 ) : (
-                  neighbor.server_name
+                  <span className="text-paper">{neighbor.server_name}</span>
                 )}
               </p>
             </li>

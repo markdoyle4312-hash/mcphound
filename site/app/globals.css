@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  ::selection {
+    background: theme("colors.signal.DEFAULT");
+    color: theme("colors.ink.950");
+  }
+
+  * {
+    border-color: theme("colors.ink.700");
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+
+  :focus-visible {
+    outline: 2px solid theme("colors.signal.DEFAULT");
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-widest2 text-paper-dim;
+  }
+
+  .hairline {
+    @apply border-t border-ink-700;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
