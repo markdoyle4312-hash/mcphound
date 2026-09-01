@@ -13,6 +13,7 @@ export function generateMetadata(): Metadata {
   const flagged = flaggedServers(index);
   return {
     description: `${flagged.length} of ${index.length} watched MCP servers currently score below 100. Worst first, with the exact finding behind every deduction.`,
+    alternates: { canonical: "/" },
   };
 }
 

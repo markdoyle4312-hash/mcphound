@@ -1,0 +1,4 @@
+# Cloudflare Pages headers file — https://developers.cloudflare.com/pages/configuration/headers/
+# Static site, no auth/forms/DB, so HSTS is the one header actually load-bearing here.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload

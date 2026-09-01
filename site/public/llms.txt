@@ -1,0 +1,31 @@
+# mcphound
+
+> Independent security reputation site for public Model Context Protocol
+> (MCP) servers. Every score comes from static analysis only — mcphound
+> never installs, executes, or connects to a server to produce a finding.
+> Findings map to the OWASP Top 10 for LLM and Agentic applications.
+
+Rescanned nightly against the official MCP Registry. A server's score is
+100 minus a multiplicative decay per finding (see /faq); 100 means no
+findings in the current snapshot, not an audit guarantee.
+
+## Site
+
+- [Flagged servers](https://mcphound.dev/): servers currently scoring
+  below 100, worst first.
+- [Full registry](https://mcphound.dev/browse/1): every scanned server,
+  paginated, with its current score.
+- [Typosquat watchlist](https://mcphound.dev/typosquats): known MCP
+  packages paired with any one- or two-character lookalike published on
+  the registry.
+- [FAQ](https://mcphound.dev/faq): how the score is computed, what counts
+  as a finding, and how to dispute one.
+
+## Project
+
+- [Source and CLI](https://github.com/markdoyle4312-hash/mcphound): the
+  `mcphound` scanner (also on PyPI), rule catalog, and this site's code.
+- [Rule catalog](https://github.com/markdoyle4312-hash/mcphound/blob/main/docs/rules.md):
+  every detection rule with its OWASP mapping.
+- [Policy enforcement](https://github.com/markdoyle4312-hash/mcphound/blob/main/docs/policy.md):
+  `mcp-policy.yaml` allowlisting for CI.

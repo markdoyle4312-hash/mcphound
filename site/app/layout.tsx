@@ -3,6 +3,7 @@ import Link from "next/link";
 import { JetBrains_Mono, Public_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import { loadIndex } from "@/lib/data";
+import { jsonLdScript } from "@/lib/jsonld";
 import "./globals.css";
 
 // JetBrains Mono was designed specifically to disambiguate similar-looking
@@ -23,12 +24,53 @@ const publicSans = Public_Sans({
   display: "swap",
 });
 
+const SITE_URL = "https://mcphound.dev";
+const SITE_DESCRIPTION =
+  "Independent security scores for public Model Context Protocol servers.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "mcphound — MCP server reputation",
     template: "%s · mcphound",
   },
-  description: "Independent security scores for public Model Context Protocol servers.",
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "mcphound",
+    title: "mcphound — MCP server reputation",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "mcphound — MCP server reputation",
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+// Static, site-wide facts — safe to declare once here rather than per page.
+// Per-server Review structured data lives in servers/page.tsx instead,
+// since the individual server identity isn't known until the client fetches
+// its shard (see the comment in servers/layout.tsx).
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "mcphound",
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  sameAs: ["https://github.com/markdoyle4312-hash/mcphound", "https://pypi.org/project/mcphound/"],
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "mcphound",
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
 };
 
 function NavLink({ href, children }: { href: string; children: ReactNode }) {
@@ -52,6 +94,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   return (
     <html lang="en" className={`${mono.variable} ${publicSans.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(websiteJsonLd) }}
+        />
+      </head>
       <body className="min-h-screen bg-ink-950 font-sans text-paper antialiased">
         <a
           href="#main"
@@ -93,6 +145,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-6 font-mono text-[11px] text-paper-dim">
             <p>Static analysis only — mcphound never executes a server to score it.</p>
             <div className="flex gap-5">
+              <Link href="/faq" className="transition-colors hover:text-signal">
+                FAQ
+              </Link>
               <a
                 href="https://github.com/markdoyle4312-hash/mcphound"
                 className="transition-colors hover:text-signal"

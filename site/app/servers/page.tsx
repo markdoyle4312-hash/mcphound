@@ -1,11 +1,61 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { pathSegmentsToName } from "@/lib/slug";
+import { pathSegmentsToName, serverHref } from "@/lib/slug";
 import { shardKey } from "@/lib/shard";
+import { jsonLdScript } from "@/lib/jsonld";
 import type { ServerDetail } from "@/lib/types";
 import { ScoreCascade } from "@/components/ScoreCascade";
 import { SeverityBadge } from "@/components/SeverityBadge";
+
+const SITE_URL = "https://mcphound.dev";
+
+// The static export can't give /servers/<name> its own prerendered <title>,
+// canonical link, or structured data (see servers/layout.tsx) — this fills
+// all three in once the client has the real server identity, so search
+// engines that render the page still see per-server signals, not the one
+// generic shell.
+function useServerHead(server: ServerDetail | null) {
+  useEffect(() => {
+    if (!server) return;
+
+    const previousTitle = document.title;
+    document.title = `${server.name} · mcphound`;
+
+    const canonical = document.createElement("link");
+    canonical.rel = "canonical";
+    canonical.href = `${SITE_URL}${serverHref(server.name)}`;
+    document.head.appendChild(canonical);
+
+    const reviewJsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Review",
+      itemReviewed: {
+        "@type": "SoftwareApplication",
+        name: server.name,
+        applicationCategory: "MCP server",
+      },
+      author: { "@type": "Organization", name: "mcphound" },
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: server.score,
+        bestRating: 100,
+        worstRating: 0,
+      },
+      datePublished: server.computed_at,
+    };
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.text = jsonLdScript(reviewJsonLd);
+    document.head.appendChild(script);
+
+    return () => {
+      document.title = previousTitle;
+      canonical.remove();
+      script.remove();
+    };
+  }, [server]);
+}
 
 type State =
   | { status: "loading" }
@@ -15,6 +65,7 @@ type State =
 
 export default function ServerPage() {
   const [state, setState] = useState<State>({ status: "loading" });
+  useServerHead(state.status === "ready" ? state.server : null);
 
   useEffect(() => {
     let cancelled = false;

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadTyposquatClusters } from "@/lib/data";
-import { nameToPathSegments, pathSegmentsToName, serverHref } from "@/lib/slug";
+import { nameToPathSegments, pathSegmentsToName, serverHref, typosquatHref } from "@/lib/slug";
 import { IdentifierDiff } from "@/components/IdentifierDiff";
 
 export function generateStaticParams() {
@@ -19,8 +19,9 @@ export async function generateMetadata({
   const { slug: pathSegments } = await params;
   const name = pathSegmentsToName(pathSegments);
   const cluster = loadTyposquatClusters().find((c) => c.known_name === name);
+  const canonical = typosquatHref(name);
   if (!cluster) {
-    return { title: "Typosquat lookup" };
+    return { title: "Typosquat lookup", alternates: { canonical } };
   }
   return {
     title: cluster.known_name,
@@ -28,6 +29,7 @@ export async function generateMetadata({
       cluster.neighbors.length === 0
         ? `No lookalike package names found for ${cluster.known_name} in the current registry snapshot.`
         : `${cluster.neighbors.length} lookalike${cluster.neighbors.length === 1 ? "" : "s"} of ${cluster.known_name} found on the registry, with the exact characters that differ.`,
+    alternates: { canonical },
   };
 }
 

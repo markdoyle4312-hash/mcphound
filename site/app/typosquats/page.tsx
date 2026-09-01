@@ -9,6 +9,7 @@ export function generateMetadata(): Metadata {
   return {
     title: "Typosquat watchlist",
     description: `${withNeighbors.length} of ${clusters.length} known MCP packages have a one- or two-character lookalike published on the registry.`,
+    alternates: { canonical: "/typosquats" },
   };
 }
 

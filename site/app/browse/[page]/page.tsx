@@ -23,6 +23,7 @@ export async function generateMetadata({
   return {
     title,
     description: `Every one of the ${index.length} public MCP servers mcphound scans, with each server's current score.`,
+    alternates: { canonical: `/browse/${pageParam}` },
   };
 }
 
