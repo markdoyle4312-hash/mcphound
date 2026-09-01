@@ -1,4 +1,4 @@
-.PHONY: install test lint typecheck format scan-self fixtures docs docs-check db-up db-migrate registry-poll registry-scan
+.PHONY: install test lint typecheck format scan-self fixtures docs docs-check rules-check db-up db-migrate registry-poll registry-scan
 
 install:
 	uv sync --extra dev
@@ -31,6 +31,10 @@ docs:
 # CI guard: fail if docs/rules.md is stale relative to the rule YAML files
 docs-check: docs
 	git diff --exit-code docs/rules.md
+
+# CI guard: fail if any rule is missing a malicious/benign fixture or a test
+rules-check:
+	uv run python scripts/check_rule_artifacts.py
 
 # Local Postgres for the registry poller (docker compose)
 db-up:
