@@ -222,7 +222,9 @@ def _in_scope_server_and_version_ids(session: Session) -> list[tuple[int, int]]:
             select(Version.server_id, Version.id).where(
                 Version.is_latest.is_(True), Version.delisted_at.is_(None)
             )
-        ).all()
+        )
+        .tuples()
+        .all()
     )
 
 
