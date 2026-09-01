@@ -23,7 +23,7 @@ jobs:
       - name: Tests
         run: uv run pytest -q
       - name: SARIF output smoke test
-        run: uv run mcphound scan tests/fixtures --sarif -o mcphound-results.sarif
+        run: uv run mcphound scan tests/fixtures/configs/*.json --sarif -o mcphound-results.sarif
       - name: Upload SARIF (works once findings exist)
         if: hashFiles('mcphound-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@6f5948dfacef28e207b48d0905cf90c03365536d # v3.37.9
