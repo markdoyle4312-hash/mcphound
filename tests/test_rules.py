@@ -156,6 +156,31 @@ def test_npm_provenance_rule_distinguishes_unpublished_package(monkeypatch):
     assert "unpublished" in findings[0].detail
 
 
+def test_pypi_provenance_rule_fires_on_missing_source_url(monkeypatch):
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(engine, "_fetch_pypi_metadata", lambda pkg: {"info": {}})
+    assert "MCP-STATIC-007" in _finding_ids("mcp-malicious-uvx.json", "MCP-STATIC-007")
+
+
+def test_pypi_provenance_rule_allows_package_with_source_url(monkeypatch):
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(
+        engine,
+        "_fetch_pypi_metadata",
+        lambda pkg: {"info": {"project_urls": {"Source": "https://github.com/example/repo"}}},
+    )
+    assert "MCP-STATIC-007" not in _finding_ids("mcp-benign-uvx.json", "MCP-STATIC-007")
+
+
+def test_pypi_provenance_rule_skips_silently_on_network_failure(monkeypatch):
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(engine, "_fetch_pypi_metadata", lambda pkg: None)
+    assert "MCP-STATIC-007" not in _finding_ids("mcp-malicious-uvx.json", "MCP-STATIC-007")
+
+
 def test_npm_provenance_rule_skips_silently_on_network_failure(monkeypatch):
     from mcphound.rules import engine
 

@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPHOUND-FIXTURE-CANARY — never reference this fixture from agent MCP configs; never execute it.",
+  "mcpServers": {
+    "evil": {
+      "command": "uvx",
+      "args": ["some-untrusted-pypi-pkg@1.0.0"]
+    }
+  }
+}

@@ -1,19 +1,21 @@
 id: MCP-STATIC-007
-title: npm package has no discoverable source repository
+title: Package has no discoverable source repository
 owasp: AST04          # Supply chain: malicious/unsigned tooling
 phase: static
-network: true          # queries registry.npmjs.org — opt-in via `mcphound scan --deep`
+network: true          # queries registry.npmjs.org / pypi.org — opt-in via `mcphound scan --deep`
 severity: medium
 confidence: low
 description: >
-  The npx-launched package's npm registry metadata has no "repository" field —
-  there's no public source to audit, review, or diff against a future version.
-  ~15% of registry MCP servers ship with no source repo (Nimblebrain, 2026).
-  A missing repo isn't proof of malice (small/private packages omit it too),
-  so this is a low-confidence signal, not a hard block.
+  The npx- or uvx-launched package's registry metadata has no discoverable
+  source repository — npm's "repository" field, or a PyPI project_urls entry
+  labeled Source/Repository/Code/GitHub/GitLab — so there's no public source
+  to audit, review, or diff against a future version. ~15% of registry MCP
+  servers ship with no source repo (Nimblebrain, 2026). A missing repo isn't
+  proof of malice (small/private packages omit it too), so this is a
+  low-confidence signal, not a hard block.
 detect:
   type: npm_provenance
   target: command
-recommendation: Prefer packages with a public, reviewable source repository; if you maintain this package, add a "repository" field to package.json.
+recommendation: Prefer packages with a public, reviewable source repository; if you maintain this package, add a "repository" field to package.json (npm) or a Source/Repository project URL (PyPI).
 references:
   - https://nimblebrain.ai/mcp/mcp-security/state-of-mcp-security/

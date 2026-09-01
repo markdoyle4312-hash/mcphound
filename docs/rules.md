@@ -13,7 +13,7 @@ maps to an OWASP LLM Top 10 (`LLMxx`) or Agentic/MCP Top 10 (`ASTxx`) code; see
 | [`MCP-STATIC-004`](#mcp-static-004) | Unpinned or @latest package version in launch command | medium | medium | AST04 |  |
 | [`MCP-STATIC-005`](#mcp-static-005) | Tool-description injection markers in server config | critical | medium | LLM01 |  |
 | [`MCP-STATIC-006`](#mcp-static-006) | Typosquat of a known MCP server package name | high | medium | AST04 |  |
-| [`MCP-STATIC-007`](#mcp-static-007) | npm package has no discoverable source repository | medium | low | AST04 | yes |
+| [`MCP-STATIC-007`](#mcp-static-007) | Package has no discoverable source repository | medium | low | AST04 | yes |
 
 
 ## MCP-STATIC-001
@@ -138,7 +138,7 @@ References:
 
 ## MCP-STATIC-007
 
-**npm package has no discoverable source repository**
+**Package has no discoverable source repository**
 
 - Severity: `medium`
 - Confidence: `low`
@@ -147,9 +147,9 @@ References:
 - Network-dependent: yes, `--deep` only
 - Detection: npm registry lookup for the launched package's `repository` field (network)
 
-The npx-launched package's npm registry metadata has no "repository" field — there's no public source to audit, review, or diff against a future version. ~15% of registry MCP servers ship with no source repo (Nimblebrain, 2026). A missing repo isn't proof of malice (small/private packages omit it too), so this is a low-confidence signal, not a hard block.
+The npx- or uvx-launched package's registry metadata has no discoverable source repository — npm's "repository" field, or a PyPI project_urls entry labeled Source/Repository/Code/GitHub/GitLab — so there's no public source to audit, review, or diff against a future version. ~15% of registry MCP servers ship with no source repo (Nimblebrain, 2026). A missing repo isn't proof of malice (small/private packages omit it too), so this is a low-confidence signal, not a hard block.
 
-**Recommendation:** Prefer packages with a public, reviewable source repository; if you maintain this package, add a "repository" field to package.json.
+**Recommendation:** Prefer packages with a public, reviewable source repository; if you maintain this package, add a "repository" field to package.json (npm) or a Source/Repository project URL (PyPI).
 
 References:
 - https://nimblebrain.ai/mcp/mcp-security/state-of-mcp-security/
