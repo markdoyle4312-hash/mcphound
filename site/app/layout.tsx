@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { loadIndex } from "@/lib/data";
 import { jsonLdScript } from "@/lib/jsonld";
 import { NavLink } from "@/components/NavLink";
+import { SearchBox } from "@/components/SearchBox";
 import "./globals.css";
 
 // JetBrains Mono was designed specifically to disambiguate similar-looking
@@ -89,6 +90,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${mono.variable} ${publicSans.variable}`}>
       <head>
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="mcphound — newly flagged servers"
+          href="/feed.xml"
+        />
+        <link
+          rel="alternate"
+          type="application/feed+json"
+          title="mcphound — newly flagged servers"
+          href="/feed.json"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd) }}
@@ -127,11 +140,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
           {watchCount !== null && (
             <div className="border-t border-ink-800 bg-ink-950/60">
-              <div className="mx-auto flex max-w-5xl items-center gap-2 px-6 py-1.5 font-mono text-[11px] text-paper-dim">
-                <span className="h-1.5 w-1.5 rounded-full bg-clear" aria-hidden />
-                <span>
-                  {watchCount} server{watchCount === 1 ? "" : "s"} on watch
+              <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-1.5 font-mono text-[11px] text-paper-dim">
+                <span className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-clear" aria-hidden />
+                  <span>
+                    {watchCount} server{watchCount === 1 ? "" : "s"} on watch
+                  </span>
                 </span>
+                <SearchBox />
               </div>
             </div>
           )}
@@ -146,6 +162,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/faq" className="-my-3 inline-block py-3 transition-colors hover:text-signal">
                 FAQ
               </Link>
+              <a
+                href="/feed.xml"
+                className="-my-3 inline-block py-3 transition-colors hover:text-signal"
+              >
+                RSS
+              </a>
               <a
                 href="https://github.com/markdoyle4312-hash/mcphound"
                 className="-my-3 inline-block py-3 transition-colors hover:text-signal"

@@ -482,11 +482,11 @@ def registry_scan(
             typer.echo(f"[dry-run, rolled back] {scan_summary.format()}; {score_summary.format()}")
         else:
             session.commit()
-            written, clustered = write_all_artifacts(session, out_dir, rules)
+            written, clustered, newly_flagged = write_all_artifacts(session, out_dir, rules)
             typer.echo(
                 f"{scan_summary.format()}; {score_summary.format()}; "
-                f"wrote artifacts for {written} server(s) and {clustered} typosquat "
-                f"cluster(s) to {out_dir}"
+                f"wrote artifacts for {written} server(s), {clustered} typosquat "
+                f"cluster(s), and {newly_flagged} newly-flagged server(s) to {out_dir}"
             )
     except Exception:
         session.rollback()
@@ -509,9 +509,10 @@ def registry_export(
     ] = None,
 ):
     """Re-materialize JSON artifacts (per-server scores, leaderboard index,
-    typosquat clusters) from already-scored DB state, without rescanning.
-    Cheap enough to run before every site deploy; run `registry-scan` on
-    its own schedule to actually update scores."""
+    typosquat clusters, newly-flagged servers) from already-scored DB
+    state, without rescanning. Cheap enough to run before every site
+    deploy; run `registry-scan` on its own schedule to actually update
+    scores."""
     _require_registry_extra()
     assert get_session_factory is not None and write_all_artifacts is not None
     cfg = load_config(config_path)
@@ -519,10 +520,10 @@ def registry_export(
     out_dir = out or Path(cfg.artifacts_dir)
     session = get_session_factory()()
     try:
-        written, clustered = write_all_artifacts(session, out_dir, rules)
+        written, clustered, newly_flagged = write_all_artifacts(session, out_dir, rules)
         typer.echo(
-            f"wrote artifacts for {written} server(s) and {clustered} typosquat "
-            f"cluster(s) to {out_dir}"
+            f"wrote artifacts for {written} server(s), {clustered} typosquat "
+            f"cluster(s), and {newly_flagged} newly-flagged server(s) to {out_dir}"
         )
     finally:
         session.close()

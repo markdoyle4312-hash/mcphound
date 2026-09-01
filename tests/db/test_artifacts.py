@@ -1,17 +1,35 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 
 from mcphound import __version__
+from mcphound.db.models import ServerScore
 from mcphound.registry.artifacts import (
     write_all_artifacts,
     write_artifacts,
+    write_newly_flagged,
     write_typosquat_clusters,
 )
 from mcphound.registry.scanner import run_scan, run_scoring
 from mcphound.rules.loader import load_rules
 
 RULES = load_rules()
+
+
+def _add_score(
+    db_session_fixture, server_id: int, score: int, computed_at: dt.datetime, finding_count: int = 0
+):
+    db_session_fixture.add(
+        ServerScore(
+            server_id=server_id,
+            score=score,
+            finding_count=finding_count,
+            mcphound_version="test",
+            computed_at=computed_at,
+        )
+    )
+    db_session_fixture.flush()
 
 
 def test_write_artifacts_writes_a_per_server_file_and_an_index(
@@ -189,9 +207,79 @@ def test_write_all_artifacts_writes_both_files(db_session_fixture, seed_version,
     run_scan(db_session_fixture, RULES, __version__)
     run_scoring(db_session_fixture, __version__)
 
-    written, clustered = write_all_artifacts(db_session_fixture, tmp_path, RULES)
+    written, clustered, newly_flagged = write_all_artifacts(db_session_fixture, tmp_path, RULES)
 
     assert written == 1
     assert clustered == 0
+    assert newly_flagged == 0
     assert (tmp_path / "index.json").exists()
     assert (tmp_path / "typosquat-clusters.json").exists()
+    assert (tmp_path / "newly-flagged.json").exists()
+
+
+def test_write_newly_flagged_includes_a_server_whose_score_just_crossed_below_100(
+    db_session_fixture, seed_version, tmp_path
+):
+    server, _ = seed_version()
+    now = dt.datetime.now(dt.UTC)
+    _add_score(db_session_fixture, server.id, 100, now - dt.timedelta(days=1))
+    _add_score(db_session_fixture, server.id, 65, now, finding_count=1)
+    write_artifacts(db_session_fixture, tmp_path)
+
+    count = write_newly_flagged(db_session_fixture, tmp_path)
+
+    assert count == 1
+    flagged = json.loads((tmp_path / "newly-flagged.json").read_text(encoding="utf-8"))
+    assert flagged == [
+        {
+            "name": server.name,
+            "slug": "io.github.acme__tool",
+            "score": 65,
+            "previous_score": 100,
+            "finding_count": 1,
+            "computed_at": flagged[0]["computed_at"],
+        }
+    ]
+
+
+def test_write_newly_flagged_includes_a_server_flagged_on_its_first_ever_scan(
+    db_session_fixture, seed_version, tmp_path
+):
+    server, _ = seed_version()
+    _add_score(db_session_fixture, server.id, 80, dt.datetime.now(dt.UTC))
+    write_artifacts(db_session_fixture, tmp_path)
+
+    write_newly_flagged(db_session_fixture, tmp_path)
+
+    flagged = json.loads((tmp_path / "newly-flagged.json").read_text(encoding="utf-8"))
+    assert flagged[0]["previous_score"] is None
+
+
+def test_write_newly_flagged_excludes_a_server_already_flagged_last_run(
+    db_session_fixture, seed_version, tmp_path
+):
+    """Score dropping further while already below 100 isn't a *new*
+    crossing — it shouldn't show up in the feed a second time."""
+    server, _ = seed_version()
+    now = dt.datetime.now(dt.UTC)
+    _add_score(db_session_fixture, server.id, 90, now - dt.timedelta(days=1))
+    _add_score(db_session_fixture, server.id, 65, now)
+    write_artifacts(db_session_fixture, tmp_path)
+
+    count = write_newly_flagged(db_session_fixture, tmp_path)
+
+    assert count == 0
+
+
+def test_write_newly_flagged_excludes_a_server_currently_scoring_100(
+    db_session_fixture, seed_version, tmp_path
+):
+    server, _ = seed_version()
+    now = dt.datetime.now(dt.UTC)
+    _add_score(db_session_fixture, server.id, 60, now - dt.timedelta(days=1))
+    _add_score(db_session_fixture, server.id, 100, now)
+    write_artifacts(db_session_fixture, tmp_path)
+
+    count = write_newly_flagged(db_session_fixture, tmp_path)
+
+    assert count == 0

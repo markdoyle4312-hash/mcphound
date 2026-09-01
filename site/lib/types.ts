@@ -36,3 +36,12 @@ export type TyposquatCluster = {
   known_slug: string;
   neighbors: TyposquatNeighbor[];
 };
+
+export type NewlyFlaggedEntry = {
+  name: string;
+  slug: string | null;
+  score: number;
+  previous_score: number | null;
+  finding_count: number;
+  computed_at: string;
+};

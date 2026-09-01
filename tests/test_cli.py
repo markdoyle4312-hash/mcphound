@@ -238,7 +238,7 @@ def test_registry_scan_commits_and_writes_artifacts_by_default(monkeypatch, tmp_
         cli_module, "run_scan", lambda session, rules, version, max_workers: fake_scan_summary
     )
     monkeypatch.setattr(cli_module, "run_scoring", lambda session, version: fake_score_summary)
-    monkeypatch.setattr(cli_module, "write_all_artifacts", lambda session, out, rules: (1, 0))
+    monkeypatch.setattr(cli_module, "write_all_artifacts", lambda session, out, rules: (1, 0, 0))
 
     runner = CliRunner()
     result = runner.invoke(app, ["registry-scan", "--config", str(cfg_path), "--out", str(out_dir)])
@@ -266,7 +266,7 @@ def test_registry_scan_passes_workers_flag_to_run_scan(monkeypatch, tmp_path):
     monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
     monkeypatch.setattr(cli_module, "run_scan", run_scan_mock)
     monkeypatch.setattr(cli_module, "run_scoring", lambda session, version: fake_score_summary)
-    monkeypatch.setattr(cli_module, "write_all_artifacts", lambda session, out, rules: (0, 0))
+    monkeypatch.setattr(cli_module, "write_all_artifacts", lambda session, out, rules: (0, 0, 0))
 
     runner = CliRunner()
     result = runner.invoke(app, ["registry-scan", "--config", str(cfg_path), "--workers", "5"])
@@ -289,7 +289,7 @@ def test_registry_scan_defaults_out_dir_from_config(monkeypatch, tmp_path):
     fake_scan_summary.format.return_value = "versions: 0 in scope"
     fake_score_summary = MagicMock()
     fake_score_summary.format.return_value = "servers scored: 0"
-    write_all_artifacts_mock = MagicMock(return_value=(0, 0))
+    write_all_artifacts_mock = MagicMock(return_value=(0, 0, 0))
 
     monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
     monkeypatch.setattr(
@@ -314,7 +314,7 @@ def test_registry_export_writes_artifacts_without_scanning(monkeypatch, tmp_path
     out_dir = tmp_path / "out"
 
     fake_session = MagicMock()
-    write_all_artifacts_mock = MagicMock(return_value=(3, 1))
+    write_all_artifacts_mock = MagicMock(return_value=(3, 1, 2))
     run_scan_mock = MagicMock()
 
     monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
@@ -331,7 +331,10 @@ def test_registry_export_writes_artifacts_without_scanning(monkeypatch, tmp_path
     fake_session.commit.assert_not_called()
     called_out_dir = write_all_artifacts_mock.call_args.args[1]
     assert called_out_dir == out_dir
-    assert "wrote artifacts for 3 server(s) and 1 typosquat cluster(s)" in result.stdout
+    assert (
+        "wrote artifacts for 3 server(s), 1 typosquat cluster(s), "
+        "and 2 newly-flagged server(s)" in result.stdout
+    )
 
 
 def test_allowlist_init_writes_policy_and_baseline(tmp_path, monkeypatch):
@@ -464,7 +467,7 @@ def test_registry_export_defaults_out_dir_from_config(monkeypatch, tmp_path):
         encoding="utf-8",
     )
     fake_session = MagicMock()
-    write_all_artifacts_mock = MagicMock(return_value=(0, 0))
+    write_all_artifacts_mock = MagicMock(return_value=(0, 0, 0))
 
     monkeypatch.setattr(cli_module, "get_session_factory", lambda: lambda: fake_session)
     monkeypatch.setattr(cli_module, "write_all_artifacts", write_all_artifacts_mock)
