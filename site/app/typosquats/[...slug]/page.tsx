@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { loadTyposquatClusters } from "@/lib/data";
 import { nameToPathSegments, pathSegmentsToName, serverHref, typosquatHref } from "@/lib/slug";
 import { IdentifierDiff } from "@/components/IdentifierDiff";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export function generateStaticParams() {
   return loadTyposquatClusters().map((cluster) => ({
@@ -47,6 +48,13 @@ export default async function TyposquatDetailPage({
 
   return (
     <div>
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Typosquat watchlist", href: "/typosquats" },
+          { label: cluster.known_name },
+        ]}
+      />
       <p className="eyebrow mb-3">known package</p>
       <h1 className="mb-8 break-all font-mono text-2xl font-semibold">{cluster.known_name}</h1>
 

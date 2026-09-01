@@ -7,6 +7,7 @@ import { jsonLdScript } from "@/lib/jsonld";
 import type { ServerDetail } from "@/lib/types";
 import { ScoreCascade } from "@/components/ScoreCascade";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 const SITE_URL = "https://mcphound.dev";
 
@@ -44,15 +45,18 @@ function useServerHead(server: ServerDetail | null) {
       },
       datePublished: server.computed_at,
     };
-    const script = document.createElement("script");
-    script.type = "application/ld+json";
-    script.text = jsonLdScript(reviewJsonLd);
-    document.head.appendChild(script);
+    const reviewScript = document.createElement("script");
+    reviewScript.type = "application/ld+json";
+    reviewScript.text = jsonLdScript(reviewJsonLd);
+    document.head.appendChild(reviewScript);
 
+    // The BreadcrumbList JSON-LD lives with the <Breadcrumbs> component
+    // rendered below, not here — it's ordinary JSX, not a <head> concern
+    // like the title/canonical/Review data above.
     return () => {
       document.title = previousTitle;
       canonical.remove();
-      script.remove();
+      reviewScript.remove();
     };
   }, [server]);
 }
@@ -111,6 +115,13 @@ export default function ServerPage() {
 
   return (
     <div>
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Registry", href: "/browse/1" },
+          { label: server.name },
+        ]}
+      />
       <p className="eyebrow mb-3">case file</p>
       <h1 className="mb-1 break-all font-mono text-2xl font-semibold">{server.name}</h1>
       <p className="mb-8 font-mono text-xs text-paper-dim">

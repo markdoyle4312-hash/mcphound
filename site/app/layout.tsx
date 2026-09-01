@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { JetBrains_Mono, Public_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import { loadIndex } from "@/lib/data";
 import { jsonLdScript } from "@/lib/jsonld";
+import { NavLink } from "@/components/NavLink";
 import "./globals.css";
 
 // JetBrains Mono was designed specifically to disambiguate similar-looking
@@ -52,6 +53,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#0A0F0C",
+};
+
 // Static, site-wide facts — safe to declare once here rather than per page.
 // Per-server Review structured data lives in servers/page.tsx instead,
 // since the individual server identity isn't known until the client fetches
@@ -72,17 +77,6 @@ const websiteJsonLd = {
   url: SITE_URL,
   description: SITE_DESCRIPTION,
 };
-
-function NavLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="font-mono text-[11px] uppercase tracking-widest2 text-paper-dim transition-colors hover:text-signal"
-    >
-      {children}
-    </Link>
-  );
-}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   let watchCount: number | null = null;
@@ -123,8 +117,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </div>
             <nav className="flex items-center gap-6">
               <NavLink href="/">Flagged</NavLink>
-              <NavLink href="/browse/1">Registry</NavLink>
-              <NavLink href="/typosquats">Typosquats</NavLink>
+              <NavLink href="/browse/1" activePrefix="/browse">
+                Registry
+              </NavLink>
+              <NavLink href="/typosquats" activePrefix="/typosquats">
+                Typosquats
+              </NavLink>
             </nav>
           </div>
           {watchCount !== null && (

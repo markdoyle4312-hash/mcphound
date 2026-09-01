@@ -46,8 +46,8 @@ export default async function BrowsePage({ params }: { params: Promise<{ page: s
         <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-ink-700 bg-ink-900 font-mono text-[11px] uppercase tracking-widest2 text-paper-dim">
-              <th className="px-4 py-2.5 font-medium">Server</th>
-              <th className="px-4 py-2.5 font-medium">Score</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">Server</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">Score</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-ink-800">

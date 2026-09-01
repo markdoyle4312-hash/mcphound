@@ -1,3 +1,7 @@
 # /servers/<name> must keep resolving to the client-rendered shell (with
 # HTTP 200, not a redirect) so deep links and shares keep their real URL.
 /servers/* /servers 200
+
+# RFC 9116 prefers /.well-known/security.txt but recommends a /security.txt
+# fallback — redirect rather than duplicating the file so the two can't drift.
+/security.txt /.well-known/security.txt 301
