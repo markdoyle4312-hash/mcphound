@@ -6,6 +6,26 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### rule: MCP-STATIC-007 extend to uvx/PyPI packages, add MCP-STATIC-008/009 (#29)
+
+`MCP-STATIC-007` (package provenance) only ever inspected npx-launched (npm)
+packages; now also checks uvx-launched (PyPI) packages via a project_urls/
+home_page lookup. Two new rules fill ROADMAP's W4 gap: `MCP-STATIC-008`
+flags an npm package whose resolved preinstall/install/postinstall script
+pipes a remote download into a shell; `MCP-STATIC-009` flags an npm or
+PyPI package first published within 30 days. Both reuse the npm/PyPI
+metadata fetchers added for 007, `network: true`, opt-in via `--deep`.
+
+### fix: MCP-STATIC-007 recognize a PyPI repo URL under any project_urls label (#29)
+
+The PyPI provenance check only matched a repository URL by project_urls
+label text ("source"/"repository"/"github") — a real package
+(`jupyter-mcp-server`) links its GitHub repo under a plain "Home" label,
+a false positive caught by re-running `tests/fp_sweep` against the
+real-world corpus. Now also checks the URL itself for a known source
+host. Also fixed `tests/fp_sweep` making live network calls to PyPI
+(never mocked `_fetch_pypi_metadata`).
+
 ### fix: refresh uv's package cache before resolving mcphound in action.yml (#17)
 
 A runner with a warm `astral-sh/setup-uv` cache from before a given
