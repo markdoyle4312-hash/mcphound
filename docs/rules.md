@@ -14,6 +14,8 @@ maps to an OWASP LLM Top 10 (`LLMxx`) or Agentic/MCP Top 10 (`ASTxx`) code; see
 | [`MCP-STATIC-005`](#mcp-static-005) | Tool-description injection markers in server config | critical | medium | LLM01 |  |
 | [`MCP-STATIC-006`](#mcp-static-006) | Typosquat of a known MCP server package name | high | medium | AST04 |  |
 | [`MCP-STATIC-007`](#mcp-static-007) | Package has no discoverable source repository | medium | low | AST04 | yes |
+| [`MCP-STATIC-008`](#mcp-static-008) | npm package install script pipes a remote download into a shell | high | medium | AST04 | yes |
+| [`MCP-STATIC-009`](#mcp-static-009) | Package was published to the registry very recently | low | low | AST04 | yes |
 
 
 ## MCP-STATIC-001
@@ -153,3 +155,40 @@ The npx- or uvx-launched package's registry metadata has no discoverable source 
 
 References:
 - https://nimblebrain.ai/mcp/mcp-security/state-of-mcp-security/
+
+---
+
+## MCP-STATIC-008
+
+**npm package install script pipes a remote download into a shell**
+
+- Severity: `high`
+- Confidence: `medium`
+- OWASP mapping: `AST04`
+- Phase: `static`
+- Network-dependent: yes, `--deep` only
+- Detection: Regex against `command`
+
+The npx-launched package's resolved npm registry metadata declares a preinstall/install/postinstall script that pipes a remote download straight into a shell (curl|sh / wget|sh) — the same rug-pull / supply-chain kill chain MCP-STATIC-002 flags in the launch command itself, but triggered at `npm install` time instead, before the server ever runs. Only the resolved "latest" version is checked.
+
+**Recommendation:** Audit the package's install scripts before installing; prefer packages with no install-time script, or vendor/pin a version you've reviewed.
+
+References:
+- https://labs.cloudsecurityalliance.org/research/csa-research-note-mcp-tool-poisoning-auto-execution-20260701/
+
+---
+
+## MCP-STATIC-009
+
+**Package was published to the registry very recently**
+
+- Severity: `low`
+- Confidence: `low`
+- OWASP mapping: `AST04`
+- Phase: `static`
+- Network-dependent: yes, `--deep` only
+- Detection: Regex against `command`
+
+The npx- or uvx-launched package was first published to its registry within the last 30 days — a brand-new package has no track record and no history of prior versions to diff against, a common shape for a disposable/dropper package or a rug-pull setup. Age alone isn't proof of malice (legitimate new projects exist too), so this is a low-confidence signal, not a hard block.
+
+**Recommendation:** Give extra scrutiny to brand-new packages — check the maintainer's other packages, star history, and whether the source repo predates the registry listing.

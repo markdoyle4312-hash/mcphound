@@ -49,12 +49,32 @@ detect:
   target: command          # only npx-launched packages are checked
 ```
 
+Two more network-dependent types reuse that same npm/PyPI metadata fetch — **install-script
+inspection** (npm only: flags a preinstall/install/postinstall script that pipes a remote download
+into a shell) and **registry age** (npm or PyPI: flags a package first published within
+`max_age_days`, default 30):
+
+```yaml
+network: true
+detect:
+  type: npm_install_script
+  target: command
+```
+
+```yaml
+network: true
+detect:
+  type: registry_age
+  target: command
+  max_age_days: 30
+```
+
 Any rule whose `detect` needs the network (not just this one) MUST set the top-level `network: true`
 field. `cli.py`'s `_collect()` filters those rules out unless `--deep` is passed — per
 GOVERNANCE.md, network-dependent checks must be marked and kept separable from the default free
-scan. The actual HTTP call must live in its own small function (see `_fetch_npm_metadata` in
-`rules/engine.py`) so tests can `monkeypatch` it instead of hitting the real registry — `pytest`
-must never make live network calls.
+scan. The actual HTTP call must live in its own small function (see `_fetch_npm_metadata`/
+`_fetch_pypi_metadata` in `rules/engine.py`) so tests can `monkeypatch` it instead of hitting the
+real registry — `pytest` must never make live network calls.
 
 Don't add a fourth `detect.type` casually — every new type is engine code, not a community-PR-able
 YAML rule. Prefer extending the regex path unless the check is genuinely not regex-expressible.

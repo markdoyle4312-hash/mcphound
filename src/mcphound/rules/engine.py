@@ -24,6 +24,19 @@ Static rules only at this stage. A rule's `detect` block is one of two shapes:
     type: npm_provenance
     target: command                        (only npx/uvx-launched packages are checked)
 
+  npm install-script inspection (`type: npm_install_script`) — same registry
+  fetch as npm_provenance, but inspects the resolved version's declared
+  preinstall/install/postinstall scripts for a curl|wget-piped-to-shell
+  pattern. npm-only (npx-launched); also requires `network: true`:
+    type: npm_install_script
+    target: command
+
+  registry age (`type: registry_age`) — flags a package first published to
+  its registry (npm or PyPI) within `max_age_days`; also requires `network: true`:
+    type: registry_age
+    target: command
+    max_age_days: <int>                    (default 30 if omitted)
+
 A rule may also set `also: oci_pin` alongside its primary `pattern`/`type` — a
 secondary check, run only when the primary one found nothing, for launch
 commands the primary shape can't express. Today the only such check is
@@ -40,6 +53,7 @@ from __future__ import annotations
 import json
 import re
 import time
+from datetime import UTC, datetime
 
 import httpx
 
@@ -266,6 +280,88 @@ def _evaluate_npm_provenance(server: ServerConfig, rule: dict, detect: dict) -> 
     return [_make_finding(rule, server, detail)]
 
 
+# Same "download piped straight into a shell" shape MCP-STATIC-002 flags in a
+# server's own launch command, applied to an npm package's declared install
+# scripts instead — the code runs at `npm install` time, before the server
+# itself ever starts.
+_DANGEROUS_INSTALL_SCRIPT_PATTERN = re.compile(
+    r"(curl|wget)\s+[^|]+\|\s*(sh|bash|zsh)", re.IGNORECASE
+)
+_INSTALL_SCRIPT_KEYS = ("preinstall", "install", "postinstall")
+
+
+def _evaluate_npm_install_script(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
+    if "npx" not in server.command:
+        return []
+    pkg = extract_command_package(server)
+    if not pkg:
+        return []
+    meta = _fetch_npm_metadata(pkg)
+    if meta is None:
+        return []
+    latest = meta.get("dist-tags", {}).get("latest")
+    version_info = meta.get("versions", {}).get(latest, {}) if latest else {}
+    scripts = version_info.get("scripts") or {}
+    for key in _INSTALL_SCRIPT_KEYS:
+        script = scripts.get(key)
+        if script and _DANGEROUS_INSTALL_SCRIPT_PATTERN.search(script):
+            detail = (
+                f'npm package "{pkg}"\'s "{key}" script pipes a remote '
+                f"download into a shell: {script}"
+            )
+            return [_make_finding(rule, server, detail)]
+    return []
+
+
+def _package_age_days(created_iso: str) -> int | None:
+    try:
+        created = datetime.fromisoformat(created_iso.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    return (datetime.now(UTC) - created).days
+
+
+def _evaluate_registry_age(server: ServerConfig, rule: dict, detect: dict) -> list[Finding]:
+    pkg = extract_command_package(server)
+    if not pkg:
+        return []
+    max_age_days = int(detect.get("max_age_days", 30))
+
+    if "uvx" in server.command:
+        meta = _fetch_pypi_metadata(pkg)
+        if meta is None:
+            return []
+        upload_times = [
+            file.get("upload_time_iso_8601")
+            for files in (meta.get("releases") or {}).values()
+            for file in files
+            if file.get("upload_time_iso_8601")
+        ]
+        if not upload_times:
+            return []
+        created_iso = min(upload_times)
+        registry_label = "PyPI"
+    elif "npx" in server.command:
+        meta = _fetch_npm_metadata(pkg)
+        if meta is None:
+            return []
+        created_iso = meta.get("time", {}).get("created")
+        if not created_iso:
+            return []
+        registry_label = "npm"
+    else:
+        return []
+
+    age_days = _package_age_days(created_iso)
+    if age_days is None or age_days > max_age_days:
+        return []
+    detail = (
+        f'{registry_label} package "{pkg}" was first published {age_days} '
+        "day(s) ago — no track record yet"
+    )
+    return [_make_finding(rule, server, detail)]
+
+
 def evaluate(server: ServerConfig, rules: list[dict]) -> list[Finding]:
     findings: list[Finding] = []
     for rule in rules:
@@ -277,6 +373,10 @@ def evaluate(server: ServerConfig, rules: list[dict]) -> list[Finding]:
             rule_findings = _evaluate_typosquat(server, rule, detect)
         elif detect_type == "npm_provenance":
             rule_findings = _evaluate_npm_provenance(server, rule, detect)
+        elif detect_type == "npm_install_script":
+            rule_findings = _evaluate_npm_install_script(server, rule, detect)
+        elif detect_type == "registry_age":
+            rule_findings = _evaluate_registry_age(server, rule, detect)
         else:
             rule_findings = _evaluate_regex(server, rule, detect)
         if not rule_findings and detect.get("also") == "oci_pin":

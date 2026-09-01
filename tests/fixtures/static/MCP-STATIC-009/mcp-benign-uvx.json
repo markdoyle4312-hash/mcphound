@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPHOUND-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "uvx",
+      "args": ["some-established-pypi-pkg@1.0.0"]
+    }
+  }
+}

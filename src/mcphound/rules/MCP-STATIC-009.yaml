@@ -1,0 +1,19 @@
+id: MCP-STATIC-009
+title: Package was published to the registry very recently
+owasp: AST04          # Supply chain: malicious/unsigned tooling
+phase: static
+network: true          # queries registry.npmjs.org / pypi.org — opt-in via `mcphound scan --deep`
+severity: low
+confidence: low
+description: >
+  The npx- or uvx-launched package was first published to its registry
+  within the last 30 days — a brand-new package has no track record and no
+  history of prior versions to diff against, a common shape for a
+  disposable/dropper package or a rug-pull setup. Age alone isn't proof of
+  malice (legitimate new projects exist too), so this is a low-confidence
+  signal, not a hard block.
+detect:
+  type: registry_age
+  target: command
+  max_age_days: 30
+recommendation: Give extra scrutiny to brand-new packages — check the maintainer's other packages, star history, and whether the source repo predates the registry listing.

@@ -1,0 +1,20 @@
+id: MCP-STATIC-008
+title: npm package install script pipes a remote download into a shell
+owasp: AST04          # Supply chain: malicious/unsigned tooling
+phase: static
+network: true          # queries registry.npmjs.org — opt-in via `mcphound scan --deep`
+severity: high
+confidence: medium
+description: >
+  The npx-launched package's resolved npm registry metadata declares a
+  preinstall/install/postinstall script that pipes a remote download
+  straight into a shell (curl|sh / wget|sh) — the same rug-pull /
+  supply-chain kill chain MCP-STATIC-002 flags in the launch command
+  itself, but triggered at `npm install` time instead, before the server
+  ever runs. Only the resolved "latest" version is checked.
+detect:
+  type: npm_install_script
+  target: command
+recommendation: Audit the package's install scripts before installing; prefer packages with no install-time script, or vendor/pin a version you've reviewed.
+references:
+  - https://labs.cloudsecurityalliance.org/research/csa-research-note-mcp-tool-poisoning-auto-execution-20260701/
