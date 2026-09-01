@@ -8,7 +8,9 @@ rolls back."""
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
@@ -22,6 +24,17 @@ from .adapter import version_to_server_config
 from .scoring import dedupe_by_rule_id, score_server
 
 logger = logging.getLogger(__name__)
+
+# Batch size for IN(...) queries over version/scan ids. Keeps individual
+# queries well clear of driver/parameter-count limits at registry scale
+# (~25k in-scope versions) without needing an ids-as-array rewrite.
+_IN_CLAUSE_BATCH_SIZE = 2000
+
+
+def _chunked[T](items: list[T], size: int = _IN_CLAUSE_BATCH_SIZE) -> Iterator[list[T]]:
+    for i in range(0, len(items), size):
+        yield items[i : i + size]
+
 
 _SCAN_PROGRESS_INTERVAL = 25
 
@@ -61,30 +74,38 @@ def _in_scope_versions(session: Session) -> list[Version]:
     )
 
 
-def _latest_hash_observed_at(session: Session, version_id: int):
-    return session.execute(
-        select(Hash.observed_at)
-        .where(Hash.version_id == version_id)
-        .order_by(Hash.observed_at.desc())
-        .limit(1)
-    ).scalar_one_or_none()
+def _latest_hash_observed_map(
+    session: Session, version_ids: list[int]
+) -> dict[int, dt.datetime]:
+    """version_id -> most recent Hash.observed_at, in one query per batch
+    instead of one query per version (DISTINCT ON is Postgres-specific, same
+    as the rest of this pipeline's use of pg_insert)."""
+    result: dict[int, dt.datetime] = {}
+    for batch in _chunked(version_ids):
+        rows = session.execute(
+            select(Hash.version_id, Hash.observed_at)
+            .distinct(Hash.version_id)
+            .where(Hash.version_id.in_(batch))
+            .order_by(Hash.version_id, Hash.observed_at.desc())
+        ).all()
+        result.update({row.version_id: row.observed_at for row in rows})
+    return result
 
 
-def _needs_rescan(session: Session, version: Version, mcphound_version: str) -> bool:
-    scan = (
-        session.execute(
-            select(Scan)
-            .where(Scan.version_id == version.id, Scan.mcphound_version == mcphound_version)
-            .order_by(Scan.scanned_at.desc())
-            .limit(1)
-        )
-        .scalars()
-        .first()
-    )
-    if scan is None:
-        return True
-    latest_hash_at = _latest_hash_observed_at(session, version.id)
-    return latest_hash_at is not None and latest_hash_at > scan.scanned_at
+def _latest_scan_at_map(
+    session: Session, version_ids: list[int], mcphound_version: str
+) -> dict[int, dt.datetime]:
+    """version_id -> most recent Scan.scanned_at for this rule fingerprint."""
+    result: dict[int, dt.datetime] = {}
+    for batch in _chunked(version_ids):
+        rows = session.execute(
+            select(Scan.version_id, Scan.scanned_at)
+            .distinct(Scan.version_id)
+            .where(Scan.version_id.in_(batch), Scan.mcphound_version == mcphound_version)
+            .order_by(Scan.version_id, Scan.scanned_at.desc())
+        ).all()
+        result.update({row.version_id: row.scanned_at for row in rows})
+    return result
 
 
 def _write_scan(session: Session, version_id: int, mcphound_version: str, findings, status: str):
@@ -127,6 +148,13 @@ def run_scan(
     summary = ScanSummary()
     processed = 0
 
+    # Bulk-fetched once instead of two SELECTs per version — at registry
+    # scale (~25k in-scope versions) the old per-version round trips to
+    # Postgres dominated wall time before a single evaluate() call had run.
+    version_ids = [v.id for v in versions]
+    latest_scan_at = _latest_scan_at_map(session, version_ids, mcphound_version)
+    latest_hash_at = _latest_hash_observed_map(session, version_ids)
+
     def _log_progress() -> None:
         if processed % _SCAN_PROGRESS_INTERVAL == 0 or processed == total:
             logger.info(
@@ -142,7 +170,10 @@ def run_scan(
         futures = {}
         for version in versions:
             summary.versions_seen += 1
-            if not _needs_rescan(session, version, mcphound_version):
+            scanned_at = latest_scan_at.get(version.id)
+            hash_at = latest_hash_at.get(version.id)
+            needs_rescan = scanned_at is None or (hash_at is not None and hash_at > scanned_at)
+            if not needs_rescan:
                 summary.versions_skipped += 1
                 processed += 1
                 _log_progress()
@@ -185,53 +216,70 @@ class ScoringSummary:
         return f"servers scored: {self.servers_scored}"
 
 
-def _in_scope_server_ids(session: Session) -> list[int]:
+def _in_scope_server_and_version_ids(session: Session) -> list[tuple[int, int]]:
     return list(
         session.execute(
-            select(Version.server_id)
-            .where(Version.is_latest.is_(True), Version.delisted_at.is_(None))
-            .distinct()
-        ).scalars()
-    )
-
-
-def _latest_ok_scan_findings(session: Session, version_id: int) -> list[FindingRow]:
-    scan = (
-        session.execute(
-            select(Scan)
-            .where(Scan.version_id == version_id, Scan.status == "ok")
-            .order_by(Scan.scanned_at.desc())
-            .limit(1)
+            select(Version.server_id, Version.id).where(
+                Version.is_latest.is_(True), Version.delisted_at.is_(None)
+            )
         )
-        .scalars()
-        .first()
+        .tuples()
+        .all()
     )
-    if scan is None:
-        return []
-    return list(session.execute(select(FindingRow).where(FindingRow.scan_id == scan.id)).scalars())
+
+
+def _latest_ok_scan_id_map(session: Session, version_ids: list[int]) -> dict[int, int]:
+    """version_id -> id of its most recent successful scan, one query per
+    batch instead of one query per version."""
+    result: dict[int, int] = {}
+    for batch in _chunked(version_ids):
+        rows = session.execute(
+            select(Scan.version_id, Scan.id)
+            .distinct(Scan.version_id)
+            .where(Scan.version_id.in_(batch), Scan.status == "ok")
+            .order_by(Scan.version_id, Scan.scanned_at.desc())
+        ).all()
+        result.update({row.version_id: row.id for row in rows})
+    return result
+
+
+def _findings_by_scan_id(session: Session, scan_ids: list[int]) -> dict[int, list[FindingRow]]:
+    result: dict[int, list[FindingRow]] = {}
+    for batch in _chunked(scan_ids):
+        rows = session.execute(
+            select(FindingRow).where(FindingRow.scan_id.in_(batch))
+        ).scalars()
+        for finding in rows:
+            result.setdefault(finding.scan_id, []).append(finding)
+    return result
 
 
 def run_scoring(session: Session, mcphound_version: str) -> ScoringSummary:
     """Aggregates each server's in-scope versions' most recent successful
     scan into one unioned, de-duplicated finding set, scores it, and writes
     a ServerScore row. Independent of run_scan — can be re-run on its own
-    (e.g. after tuning scoring.SEVERITY_WEIGHT) without rescanning."""
+    (e.g. after tuning scoring.SEVERITY_WEIGHT) without rescanning.
+
+    Batched into a handful of bulk queries rather than one query per
+    server/version — at registry scale (~25k in-scope versions) the old
+    per-version round trips to Postgres dominated wall time here just like
+    in run_scan."""
     summary = ScoringSummary()
-    for server_id in _in_scope_server_ids(session):
-        version_ids = (
-            session.execute(
-                select(Version.id).where(
-                    Version.server_id == server_id,
-                    Version.is_latest.is_(True),
-                    Version.delisted_at.is_(None),
-                )
-            )
-            .scalars()
-            .all()
-        )
+    server_and_version_ids = _in_scope_server_and_version_ids(session)
+    version_ids_by_server: dict[int, list[int]] = {}
+    for server_id, version_id in server_and_version_ids:
+        version_ids_by_server.setdefault(server_id, []).append(version_id)
+
+    all_version_ids = [version_id for _, version_id in server_and_version_ids]
+    latest_scan_id = _latest_ok_scan_id_map(session, all_version_ids)
+    findings_by_scan = _findings_by_scan_id(session, list(set(latest_scan_id.values())))
+
+    for server_id, version_ids in version_ids_by_server.items():
         findings: list[FindingRow] = []
         for version_id in version_ids:
-            findings.extend(_latest_ok_scan_findings(session, version_id))
+            scan_id = latest_scan_id.get(version_id)
+            if scan_id is not None:
+                findings.extend(findings_by_scan.get(scan_id, []))
         unioned = dedupe_by_rule_id(findings)
         session.add(
             ServerScore(
