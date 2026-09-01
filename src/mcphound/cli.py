@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from urllib.parse import quote
 
 import typer
@@ -38,19 +38,27 @@ from .rules.loader import load_rules, rules_fingerprint
 # registry-* commands need the `registry` extra, so their sqlalchemy-backed
 # imports are guarded here rather than required at module scope; each
 # registry-* command checks for None and raises a clear error instead of a
-# raw ModuleNotFoundError traceback.
-try:
+# raw ModuleNotFoundError traceback. The TYPE_CHECKING branch gives mypy the
+# real signatures (and thus real return types for callers) without making
+# the registry extra a hard runtime dependency.
+if TYPE_CHECKING:
     from .db.session import get_session_factory
     from .registry.artifacts import write_all_artifacts
     from .registry.poller import run_poll
     from .registry.scanner import DEFAULT_MAX_WORKERS, run_scan, run_scoring
-except ImportError:
-    get_session_factory = None
-    write_all_artifacts = None
-    run_poll = None
-    run_scan = None
-    run_scoring = None
-    DEFAULT_MAX_WORKERS = 16
+else:
+    try:
+        from .db.session import get_session_factory
+        from .registry.artifacts import write_all_artifacts
+        from .registry.poller import run_poll
+        from .registry.scanner import DEFAULT_MAX_WORKERS, run_scan, run_scoring
+    except ImportError:
+        get_session_factory = None
+        write_all_artifacts = None
+        run_poll = None
+        run_scan = None
+        run_scoring = None
+        DEFAULT_MAX_WORKERS = 16
 
 
 def _require_registry_extra() -> None:
@@ -69,6 +77,27 @@ app = typer.Typer(
 )
 
 FEEDBACK_REPO = "markdoyle4312-hash/mcphound"
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"mcphound {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool | None,
+        typer.Option(
+            "--version",
+            callback=_version_callback,
+            is_eager=True,
+            help="Show the installed mcphound version and exit.",
+        ),
+    ] = None,
+) -> None:
+    pass
 
 
 def _enable_progress_logging() -> None:
@@ -385,6 +414,7 @@ def registry_poll(
 ):
     """Poll the official MCP Registry and upsert servers/versions/hashes into Postgres."""
     _require_registry_extra()
+    assert get_session_factory is not None and run_poll is not None
     _enable_progress_logging()
     cfg = load_config(config_path)
     session = get_session_factory()()
@@ -430,6 +460,12 @@ def registry_scan(
     """Batch-scan every currently-listed registry server, score it 0-100, and
     write JSON artifacts. Run after `registry-poll` has populated the DB."""
     _require_registry_extra()
+    assert (
+        get_session_factory is not None
+        and run_scan is not None
+        and run_scoring is not None
+        and write_all_artifacts is not None
+    )
     _enable_progress_logging()
     cfg = load_config(config_path)
     rules = load_rules()
@@ -477,6 +513,7 @@ def registry_export(
     Cheap enough to run before every site deploy; run `registry-scan` on
     its own schedule to actually update scores."""
     _require_registry_extra()
+    assert get_session_factory is not None and write_all_artifacts is not None
     cfg = load_config(config_path)
     rules = load_rules()
     out_dir = out or Path(cfg.artifacts_dir)

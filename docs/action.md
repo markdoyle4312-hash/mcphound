@@ -20,8 +20,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: markdoyle4312-hash/mcphound@v1
+      - uses: markdoyle4312-hash/mcphound@v0.1.5
 ```
+
+> No `v1` tag exists yet — see "Publishing status" below. Pin to the
+> latest release tag (currently `v0.1.5`) until `v1` is cut.
 
 `fetch-depth: 0` (or at least enough history to reach the PR's base
 commit) is required — the action diffs the PR against its base to decide

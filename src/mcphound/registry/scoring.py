@@ -12,6 +12,7 @@ W16 manual spot-check sprint."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol
 
 from ..models import SEVERITY_ORDER
@@ -33,7 +34,7 @@ def _decay(finding: ScorableFinding) -> float:
     return weight * factor
 
 
-def score_server(findings: list[ScorableFinding]) -> int:
+def score_server(findings: Sequence[ScorableFinding]) -> int:
     """0-100. Empty findings scores 100; more findings only ever decreases
     the score (monotonic non-increasing)."""
     score = 100.0
@@ -49,7 +50,7 @@ def _rank(finding: ScorableFinding) -> tuple[int, int]:
     )
 
 
-def dedupe_by_rule_id(findings: list[ScorableFinding]) -> list[ScorableFinding]:
+def dedupe_by_rule_id(findings: Sequence[ScorableFinding]) -> list[ScorableFinding]:
     """Union findings from a server's multiple in-scope versions, keeping
     the max (severity, confidence) pair per rule_id."""
     best: dict[str, ScorableFinding] = {}

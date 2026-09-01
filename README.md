@@ -2,7 +2,7 @@
 
 Independent security scanner and reputation layer for MCP servers and agent skills.
 
-> Status: **v0.1 published** ([PyPI](https://pypi.org/project/mcphound/)) — static CLI scanning, a local registry poller/scorer, a read-only reputation API, and a Next.js site are built; none of the site/API is deployed publicly yet, and the GitHub Action / policy enforcement is still ahead. See [ROADMAP.md](ROADMAP.md).
+> Status: **v0.1 published** ([PyPI](https://pypi.org/project/mcphound/)) — static CLI scanning, a local registry poller/scorer, a read-only reputation API, a GitHub Action for `mcp-policy.yaml` enforcement, and a Next.js site (deployed nightly to Cloudflare Pages) are all built and live. See [ROADMAP.md](ROADMAP.md).
 
 mcphound discovers the MCP servers configured in your AI coding clients (Claude Code/Desktop, Cursor, Windsurf, Gemini CLI, OpenCode) and checks them for supply-chain risks: hardcoded secrets, download-and-execute launch commands, over-broad permissions, pinned-version drift, and (in later versions) tool-description poisoning, typosquats, and runtime rug-pulls. Findings map to the OWASP Top 10 for LLM and Agentic applications and can be exported as SARIF into GitHub code scanning.
 
@@ -89,9 +89,14 @@ reference and how to run it locally.
 uv sync --extra dev
 uv run pytest -q          # tests
 uv run ruff check .       # lint
+make typecheck            # mypy over src/mcphound
 make scan-self            # scan this repo's own agent configs (dogfood)
 make docs                 # regenerate docs/rules.md from the rule YAML files
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full PR process and
+[GOVERNANCE.md](GOVERNANCE.md) for how detection rules get reviewed. This
+project follows a [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Safety
 

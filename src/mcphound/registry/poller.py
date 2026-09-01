@@ -10,8 +10,9 @@ from __future__ import annotations
 import datetime as dt
 import logging
 from dataclasses import dataclass
+from typing import cast
 
-from sqlalchemy import select, update
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -163,16 +164,25 @@ def _maybe_insert_hash(
 
 
 def _mark_delisted(session: Session, run_started_at: dt.datetime, summary: PollSummary) -> None:
-    result = session.execute(
-        update(Server)
-        .where(Server.last_seen_at < run_started_at, Server.delisted_at.is_(None))
-        .values(delisted_at=run_started_at)
+    # Session.execute() is typed as returning the generic Result[Any]; at
+    # runtime an UPDATE always yields a CursorResult, which is what carries
+    # .rowcount.
+    result = cast(
+        CursorResult,
+        session.execute(
+            update(Server)
+            .where(Server.last_seen_at < run_started_at, Server.delisted_at.is_(None))
+            .values(delisted_at=run_started_at)
+        ),
     )
     summary.servers_delisted = result.rowcount
-    result = session.execute(
-        update(Version)
-        .where(Version.last_seen_at < run_started_at, Version.delisted_at.is_(None))
-        .values(delisted_at=run_started_at)
+    result = cast(
+        CursorResult,
+        session.execute(
+            update(Version)
+            .where(Version.last_seen_at < run_started_at, Version.delisted_at.is_(None))
+            .values(delisted_at=run_started_at)
+        ),
     )
     summary.versions_delisted = result.rowcount
 
@@ -182,16 +192,22 @@ def _undelist_reappeared(
     run_started_at: dt.datetime,
     summary: PollSummary,
 ) -> None:
-    result = session.execute(
-        update(Server)
-        .where(Server.last_seen_at == run_started_at, Server.delisted_at.isnot(None))
-        .values(delisted_at=None)
+    result = cast(
+        CursorResult,
+        session.execute(
+            update(Server)
+            .where(Server.last_seen_at == run_started_at, Server.delisted_at.isnot(None))
+            .values(delisted_at=None)
+        ),
     )
     summary.servers_relisted = result.rowcount
-    result = session.execute(
-        update(Version)
-        .where(Version.last_seen_at == run_started_at, Version.delisted_at.isnot(None))
-        .values(delisted_at=None)
+    result = cast(
+        CursorResult,
+        session.execute(
+            update(Version)
+            .where(Version.last_seen_at == run_started_at, Version.delisted_at.isnot(None))
+            .values(delisted_at=None)
+        ),
     )
     summary.versions_relisted = result.rowcount
 
