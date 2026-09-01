@@ -21,7 +21,7 @@ Independent security reputation + policy-enforcement layer for MCP servers and a
 - Tests must pass before you say a task is done. Run `uv run pytest -q`.
 
 ## SAFETY RULES (this project handles malware-adjacent code — read twice)
-- **Never execute a fixture MCP server on the host.** No `npx`, `uvx`, `node`, or `python` against anything in `tests/fixtures/` outside Docker. Dynamic analysis runs only via the sandbox runner (`docker` with a dedicated egress-proxy network, no mounted secrets, no host network).
+- **Never execute a fixture MCP server on the host.** No `npx`, `uvx`, `node`, or `python` against anything in `tests/fixtures/` outside Docker. mcphound is static-analysis only today — the Docker sandbox runner (dedicated egress-proxy network, no mounted secrets, no host network) is unbuilt scaffolding (see `sandbox/README.md`, ROADMAP.md's v1.5 milestone). Dynamic analysis MUST NOT run anywhere except that sandbox once it exists; until then, don't execute untrusted or fixture servers at all.
 - Every malicious fixture contains the canary marker string `MCPHOUND-FIXTURE-CANARY` and is never referenced from `.mcp.json`, `opencode.json`, or any agent config.
 - Do not add new MCP servers to agent configs without: (a) pinned version, (b) a note in this commit message why it's needed, (c) running `mcphound scan` (or mcp-scan as interim) against the changed config.
 - Never put secrets in config files; use environment variables only (`.env`, gitignored).
