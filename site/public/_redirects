@@ -1,0 +1,3 @@
+# /servers/<name> must keep resolving to the client-rendered shell (with
+# HTTP 200, not a redirect) so deep links and shares keep their real URL.
+/servers/* /servers 200

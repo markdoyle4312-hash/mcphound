@@ -24,6 +24,24 @@ project (`mcphound`), which has no comparable route cap for a static
 export. `VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` repo secrets
 replaced by `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`.
 
+### fix: shard server-detail data instead of prerendering one page per server
+
+That "no comparable route cap" claim above was wrong — Cloudflare Pages
+has its own 20,000-file-per-deployment cap (100,000 on paid plans), which
+the same one-page-per-server approach hit on 2026-09-01 at 25,924 static
+pages. `site/app/servers/[...slug]/page.tsx`'s `generateStaticParams()`
+is gone; `/servers/<name>` is now a single static Client Component shell
+(`site/app/servers/page.tsx`) that reads the real URL from
+`window.location`, computes a shard via `site/lib/shard.ts`
+(`shardKey`/`groupByShard`, `SHARD_COUNT = 64`), and fetches its one
+`public/data/shard-<n>.json` file (built by the new `prebuild` npm script,
+`site/scripts/build-server-shards.ts`, which reuses `lib/data.ts`'s
+existing `loadIndex`/`loadServer`). A `public/_redirects` rule
+(`/servers/* /servers 200`) keeps `/servers/<name>` URLs resolving to that
+shell. Deployed file count no longer scales with registry size — only
+`/browse`'s page count does, at ~1 page per 100 servers. See
+`docs/superpowers/specs/2026-09-01-server-detail-sharding-design.md`.
+
 ## [0.1.5] — 2026-08-31
 
 Note: this is the first published release containing `mcphound allowlist

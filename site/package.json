@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/build-server-shards.ts",
     "build": "next build",
     "test": "vitest run",
     "lint": "eslint .",
