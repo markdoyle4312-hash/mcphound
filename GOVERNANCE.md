@@ -1,6 +1,6 @@
 # Community governance
 
-mcphound is solo-maintained, pre-launch. This document is the actual process a
+mcphound is solo-maintained, pre-1.0. This document is the actual process a
 contribution gets held to, not aspirational notes.
 
 ## Proposing a new detection rule

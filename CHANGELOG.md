@@ -6,12 +6,24 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
-### fix: MCP-STATIC-007 misleading finding message (#17)
+### fix: refresh uv's package cache before resolving mcphound in action.yml (#17)
 
-Message said "no repository field" even when the real condition was a fully
-unpublished package (3/31 sampled cases in the W16 spot-check).
+A runner with a warm `astral-sh/setup-uv` cache from before a given
+mcphound release was published resolved `uvx --from mcphound==<version>`
+against stale cached package-index metadata and failed with "no version
+of mcphound==X", even though the version was live on PyPI — confirmed
+against the real v0.1.5 publish. `--refresh-package mcphound` forces uv
+to revalidate that package's index data.
 
 ### fix: key registry-scan staleness off rule content, not package version (#18)
+
+### chore: release hardening — v1 tag docs, README, SECURITY.md, CI fixes, mypy (#20)
+
+Fixed a stale README status banner and an unpinned `docs/action.md` `v1`
+tag reference that would 404. Added `SECURITY.md` (GitHub private
+vulnerability reporting as the primary channel) and pointed
+`GOVERNANCE.md` at it. Stopped the CI SARIF smoke test's `|| true` from
+swallowing real crashes, not just expected findings.
 
 ### fix: migrate nightly site deploy from Vercel to Cloudflare Pages
 
@@ -41,6 +53,17 @@ existing `loadIndex`/`loadServer`). A `public/_redirects` rule
 shell. Deployed file count no longer scales with registry size — only
 `/browse`'s page count does, at ~1 page per 100 servers. See
 `docs/superpowers/specs/2026-09-01-server-detail-sharding-design.md`.
+
+### perf: batch N+1 registry-scan/scoring queries, cache nightly CI deps (#28)
+
+`run_scan` and `run_scoring` each issued 2-3 sequential Postgres round
+trips per version/server against the hosted registry DB — at ~25k
+in-scope versions that's 50-75k+ serial round trips, which is what
+pushed the nightly job long enough to need a manual cancel. Replaced
+with batched `DISTINCT ON` queries (chunked at 2000 ids per `IN`
+clause) that fetch the same "latest row per group" data in bulk. Also
+cache uv and npm deps in the nightly workflow to cut fixed setup time
+on every run.
 
 ## [0.1.5] — 2026-08-31
 
