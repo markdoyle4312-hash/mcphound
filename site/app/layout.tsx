@@ -24,7 +24,10 @@ const publicSans = Public_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "mcphound — MCP server reputation",
+  title: {
+    default: "mcphound — MCP server reputation",
+    template: "%s · mcphound",
+  },
   description: "Independent security scores for public Model Context Protocol servers.",
 };
 

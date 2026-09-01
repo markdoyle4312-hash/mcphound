@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadIndex, pageOfServers, totalPages } from "@/lib/data";
@@ -7,6 +8,22 @@ import { ScoreStamp } from "@/components/ScoreStamp";
 export function generateStaticParams() {
   const pages = totalPages(loadIndex());
   return Array.from({ length: pages }, (_, i) => ({ page: String(i + 1) }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ page: string }>;
+}): Promise<Metadata> {
+  const { page: pageParam } = await params;
+  const index = loadIndex();
+  const pages = totalPages(index);
+  const page = Number(pageParam);
+  const title = pages > 1 ? `Full registry — page ${page} of ${pages}` : "Full registry";
+  return {
+    title,
+    description: `Every one of the ${index.length} public MCP servers mcphound scans, with each server's current score.`,
+  };
 }
 
 export default async function BrowsePage({ params }: { params: Promise<{ page: string }> }) {

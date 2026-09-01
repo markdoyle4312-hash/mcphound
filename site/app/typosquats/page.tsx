@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { loadTyposquatClusters } from "@/lib/data";
 import { typosquatHref } from "@/lib/slug";
+
+export function generateMetadata(): Metadata {
+  const clusters = loadTyposquatClusters();
+  const withNeighbors = clusters.filter((c) => c.neighbors.length > 0);
+  return {
+    title: "Typosquat watchlist",
+    description: `${withNeighbors.length} of ${clusters.length} known MCP packages have a one- or two-character lookalike published on the registry.`,
+  };
+}
 
 export default function TyposquatsIndexPage() {
   const clusters = loadTyposquatClusters();
