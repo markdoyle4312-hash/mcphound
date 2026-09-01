@@ -77,7 +77,7 @@ runs:
 
     - name: Set up uv
       if: steps.relevant.outputs.changed == 'true' && steps.policy.outputs.exists == 'true'
-      uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
     - name: Run allowlist enforce
       id: enforce
