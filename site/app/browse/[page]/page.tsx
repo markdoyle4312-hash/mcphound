@@ -1,11 +1,30 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadIndex, pageOfServers, totalPages } from "@/lib/data";
 import { serverHref } from "@/lib/slug";
+import { ScoreStamp } from "@/components/ScoreStamp";
 
 export function generateStaticParams() {
   const pages = totalPages(loadIndex());
   return Array.from({ length: pages }, (_, i) => ({ page: String(i + 1) }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ page: string }>;
+}): Promise<Metadata> {
+  const { page: pageParam } = await params;
+  const index = loadIndex();
+  const pages = totalPages(index);
+  const page = Number(pageParam);
+  const title = pages > 1 ? `Full registry — page ${page} of ${pages}` : "Full registry";
+  return {
+    title,
+    description: `Every one of the ${index.length} public MCP servers mcphound scans, with each server's current score.`,
+    alternates: { canonical: `/browse/${pageParam}` },
+  };
 }
 
 export default async function BrowsePage({ params }: { params: Promise<{ page: string }> }) {
@@ -20,40 +39,60 @@ export default async function BrowsePage({ params }: { params: Promise<{ page: s
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">All scanned servers ({index.length})</h1>
-      <table className="w-full text-left border-collapse mb-6">
-        <thead>
-          <tr className="border-b border-slate-800 text-slate-400">
-            <th className="py-2">Server</th>
-            <th className="py-2">Score</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <tr key={entry.slug} className="border-b border-slate-900">
-              <td className="py-2">
-                <Link href={serverHref(entry.name)} className="underline">
-                  {entry.name}
-                </Link>
-              </td>
-              <td className="py-2">{entry.score}</td>
+      <p className="eyebrow mb-3">full registry</p>
+      <h1 className="mb-8 text-2xl font-semibold">{index.length} servers under watch</h1>
+
+      <div className="overflow-x-auto border border-ink-700">
+        <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-ink-700 bg-ink-900 font-mono text-[11px] uppercase tracking-widest2 text-paper-dim">
+              <th scope="col" className="px-4 py-2.5 font-medium">Server</th>
+              <th scope="col" className="px-4 py-2.5 font-medium">Score</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <nav className="flex gap-4 text-sm">
-        {page > 1 && (
-          <Link href={`/browse/${page - 1}`} className="underline">
-            Previous
+          </thead>
+          <tbody className="divide-y divide-ink-800">
+            {entries.map((entry) => (
+              <tr key={entry.slug}>
+                <td className="px-4 py-2.5">
+                  <Link
+                    href={serverHref(entry.name)}
+                    className="font-mono text-paper underline decoration-ink-700 underline-offset-4 hover:decoration-signal"
+                  >
+                    {entry.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-2.5">
+                  <ScoreStamp score={entry.score} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <nav className="mt-6 flex items-center gap-4 font-mono text-xs">
+        {page > 1 ? (
+          <Link
+            href={`/browse/${page - 1}`}
+            className="-my-3 inline-block py-3 text-paper underline hover:text-signal"
+          >
+            ← previous
           </Link>
+        ) : (
+          <span className="text-ink-700">← previous</span>
         )}
-        <span className="text-slate-500">
-          Page {page} of {pages}
+        <span className="text-paper-dim">
+          page {page} of {pages}
         </span>
-        {page < pages && (
-          <Link href={`/browse/${page + 1}`} className="underline">
-            Next
+        {page < pages ? (
+          <Link
+            href={`/browse/${page + 1}`}
+            className="-my-3 inline-block py-3 text-paper underline hover:text-signal"
+          >
+            next →
           </Link>
+        ) : (
+          <span className="text-ink-700">next →</span>
         )}
       </nav>
     </div>

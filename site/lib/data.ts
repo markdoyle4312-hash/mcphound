@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { IndexEntry, ServerDetail, TyposquatCluster } from "./types";
+import type { IndexEntry, NewlyFlaggedEntry, ServerDetail, TyposquatCluster } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -23,6 +23,13 @@ export function loadTyposquatClusters(): TyposquatCluster[] {
     return [];
   }
   return readJson<TyposquatCluster[]>("typosquat-clusters.json");
+}
+
+export function loadNewlyFlagged(): NewlyFlaggedEntry[] {
+  if (!existsSync(path.join(DATA_DIR, "newly-flagged.json"))) {
+    return [];
+  }
+  return readJson<NewlyFlaggedEntry[]>("newly-flagged.json");
 }
 
 export function flaggedServers(index: IndexEntry[]): IndexEntry[] {

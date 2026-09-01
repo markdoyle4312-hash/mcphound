@@ -85,8 +85,9 @@ version. `--workers 1` reproduces the old fully-sequential behavior.
 `registry-scan` already writes JSON artifacts as part of its pipeline, but
 re-running a full scan just to refresh those files is wasteful when scores
 haven't changed. `registry-export` re-materializes the same artifacts
-(`index.json`, `servers/<name>.json`, `typosquat-clusters.json`) directly
-from already-scored DB state — no rescanning, no DB writes:
+(`index.json`, `servers/<name>.json`, `typosquat-clusters.json`,
+`newly-flagged.json`) directly from already-scored DB state — no
+rescanning, no DB writes:
 
 ```bash
 uv run mcphound registry-export --config config/registry.yaml
@@ -106,6 +107,16 @@ currently-listed registry package within that rule's edit-distance
 threshold (excluding an exact match) — an empty `neighbors` list is
 expected and valid, not a bug, until the registry actually has a lookalike
 or the reference list grows.
+
+`newly-flagged.json` holds every server whose most recent `ServerScore` row
+is below 100 while the one immediately before it (if any) was 100 or the
+server had no prior score — i.e. servers that just crossed into flagged
+status on the latest run, not a rolling history of everything currently
+flagged. It's what the site's `/feed.xml` and `/feed.json` are built from
+(`write_newly_flagged()` in `registry/artifacts.py`); because it only ever
+compares the latest run to the one before it, a feed reader polling less
+often than the nightly cron could miss a server that crosses below 100 and
+back above it between two polls.
 
 ## Schema
 

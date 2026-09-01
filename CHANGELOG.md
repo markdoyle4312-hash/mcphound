@@ -6,6 +6,52 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
+### feat: newly-flagged RSS/JSON feed + client-side registry search (#31)
+
+`registry/artifacts.py` gained `write_newly_flagged()` — servers whose
+score just crossed below 100 since the previous scoring run, computed
+from `ServerScore`'s existing per-run history via a batched window query
+rather than a rolling accumulation. `/feed.xml` (RSS 2.0) and `/feed.json`
+(JSON Feed 1.1) render it; it only ever compares the latest run to the
+one before it, so a feed reader polling less often than the nightly cron
+could miss a server that crosses below 100 and back above it between two
+polls. `/search-index.json` lazily serves a compact name+score index
+(~28k servers) that `components/SearchBox.tsx` fetches and filters
+client-side, only once the search box is actually used.
+
+### feat: security headers, security.txt, PWA manifest, WCAG 2.2 fixes (#31)
+
+Added a full CSP, Permissions-Policy, X-Content-Type-Options,
+X-Frame-Options, Referrer-Policy, and HSTS to the site (`_headers`).
+`script-src` needs `'unsafe-inline'` — verified in a real browser, not
+assumed: Next's static export inlines a per-page React Server Components
+hydration payload that can't be hashed or nonce'd without a server; the
+site's JSON-LD is unaffected either way, since `type="application/ld+json"`
+is never treated as executable script. Also added `security.txt` (RFC
+9116), an installable web app manifest with generated icons, styled
+`error.tsx`/`loading.tsx`, and WCAG 2.2 fixes (24px minimum tap targets
+on nav/pagination links, `aria-current` on the active nav section,
+breadcrumbs with `BreadcrumbList` JSON-LD on nested pages).
+
+### feat: SEO fundamentals — unique metadata, sitemap, structured data (#31)
+
+Every site page previously shared one title/description; each route now
+sets its own via `generateMetadata()`, plus a real favicon and a custom
+404 page. Added `robots.txt`/`sitemap.xml` (every browse page, typosquat
+cluster, and server — capped at 49k entries per Google's per-file
+limit), per-page canonical tags, a generated Open Graph image,
+`Organization`/`WebSite`/`Review`/`FAQPage` JSON-LD, `llms.txt`, and a
+new `/faq` page sourced from `docs/policy.md` and the actual scoring
+formula rather than invented copy.
+
+### redesign: night-watch visual overhaul of the mcphound site (#31)
+
+Replaced the site's default look with a dark, terminal-styled aesthetic
+— JetBrains Mono for data/identifiers, ink/paper/signal-orange color
+tokens, severity-tinted finding badges, and a score-cascade
+visualization — in place of a generic dashboard look, to match the tone
+of a tool that watches a registry rather than reports on one.
+
 ### rule: MCP-STATIC-007 extend to uvx/PyPI packages, add MCP-STATIC-008/009 (#29)
 
 `MCP-STATIC-007` (package provenance) only ever inspected npx-launched (npm)

@@ -8,10 +8,11 @@ import hashlib
 import json
 import logging
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, aliased, selectinload
 
 from ..db.models import Finding as FindingRow
 from ..db.models import Scan, Server, ServerScore, Version
@@ -26,6 +27,18 @@ from .adapter import version_to_server_config
 logger = logging.getLogger(__name__)
 
 _UNSAFE_NAME_CHARS = re.compile(r"[^A-Za-z0-9_.@-]")
+
+# Same batching rationale as registry/scanner.py's _IN_CLAUSE_BATCH_SIZE:
+# keeps IN-clause queries well clear of driver/parameter-count limits at
+# registry scale without an ids-as-array rewrite. Duplicated rather than
+# imported — scanner.py's is a private module helper, and this is the only
+# other place in the codebase that needs it.
+_IN_CLAUSE_BATCH_SIZE = 2000
+
+
+def _chunked[T](items: list[T], size: int = _IN_CLAUSE_BATCH_SIZE) -> Iterator[list[T]]:
+    for i in range(0, len(items), size):
+        yield items[i : i + size]
 
 
 def escape_name_component(name: str) -> str:
@@ -232,10 +245,85 @@ def write_typosquat_clusters(session: Session, out_dir: Path, rules: list[dict])
     return clustered_count
 
 
-def write_all_artifacts(session: Session, out_dir: Path, rules: list[dict]) -> tuple[int, int]:
+def _recent_scores_by_server(
+    session: Session, server_ids: list[int]
+) -> dict[int, list[ServerScore]]:
+    """server_id -> its most recent two ServerScore rows (newest first), in
+    a handful of batched queries. This module's other "latest per group"
+    helpers would use DISTINCT ON (see scanner.py), but that only ever
+    returns one row per group — write_newly_flagged() needs the previous
+    score too, so this uses a ROW_NUMBER() window instead."""
+    result: dict[int, list[ServerScore]] = {}
+    for batch in _chunked(server_ids):
+        row_number = func.row_number().over(
+            partition_by=ServerScore.server_id, order_by=ServerScore.computed_at.desc()
+        )
+        subq = (
+            select(ServerScore, row_number.label("rn"))
+            .where(ServerScore.server_id.in_(batch))
+            .subquery()
+        )
+        ranked = aliased(ServerScore, subq)
+        rows = session.execute(select(ranked).where(subq.c.rn <= 2)).scalars().all()
+        for row in rows:
+            result.setdefault(row.server_id, []).append(row)
+    for scores in result.values():
+        scores.sort(key=lambda s: s.computed_at, reverse=True)
+    return result
+
+
+def write_newly_flagged(session: Session, out_dir: Path) -> int:
+    """Writes artifacts/newly-flagged.json: servers whose score just
+    crossed below 100 — the most recent ServerScore row is < 100 and the
+    one before it (if any) was >= 100. Reflects only the latest scoring
+    run vs. the one immediately before it, not a rolling history window:
+    a feed reader polling less often than the nightly cron could miss an
+    entry that crosses below 100 and back above it between two polls.
+    Reads index.json for slugs, so must run after write_artifacts() in
+    the same out_dir. Returns how many servers just crossed."""
+    server_ids = session.execute(select(Server.id)).scalars().all()
+    recent = _recent_scores_by_server(session, list(server_ids))
+
+    name_to_slug: dict[str, str] = {}
+    index_path = out_dir / "index.json"
+    if index_path.exists():
+        rows = json.loads(index_path.read_text(encoding="utf-8"))
+        name_to_slug = {row["name"]: row["slug"] for row in rows}
+
+    servers_by_id = {s.id: s for s in session.execute(select(Server)).scalars()}
+
+    flagged: list[dict] = []
+    for server_id, scores in recent.items():
+        latest = scores[0]
+        previous = scores[1] if len(scores) > 1 else None
+        if latest.score >= 100:
+            continue
+        if previous is not None and previous.score < 100:
+            continue
+        server = servers_by_id.get(server_id)
+        if server is None:
+            continue
+        flagged.append(
+            {
+                "name": server.name,
+                "slug": name_to_slug.get(server.name),
+                "score": latest.score,
+                "previous_score": previous.score if previous else None,
+                "finding_count": latest.finding_count,
+                "computed_at": latest.computed_at.isoformat(),
+            }
+        )
+    flagged.sort(key=lambda e: e["computed_at"], reverse=True)
+    (out_dir / "newly-flagged.json").write_text(json.dumps(flagged, indent=2), encoding="utf-8")
+    return len(flagged)
+
+
+def write_all_artifacts(session: Session, out_dir: Path, rules: list[dict]) -> tuple[int, int, int]:
     """Runs the full artifact export: per-server files + leaderboard index,
-    then typosquat clusters (which depend on index.json's slugs). Returns
-    (servers_written, known_names_with_a_cluster)."""
+    then typosquat clusters and newly-flagged servers (both depend on
+    index.json's slugs). Returns (servers_written,
+    known_names_with_a_cluster, newly_flagged_count)."""
     written = write_artifacts(session, out_dir)
     clustered = write_typosquat_clusters(session, out_dir, rules)
-    return written, clustered
+    newly_flagged = write_newly_flagged(session, out_dir)
+    return written, clustered, newly_flagged

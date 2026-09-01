@@ -1,0 +1,10 @@
+# RFC 9116 — https://www.rfc-editor.org/rfc/rfc9116
+# Contact info and disclosure policy are sourced from SECURITY.md and
+# GOVERNANCE.md at https://github.com/markdoyle4312-hash/mcphound — update
+# this file if those ever diverge.
+Contact: https://github.com/markdoyle4312-hash/mcphound/security/advisories/new
+Contact: mailto:mark.doyle4312@gmail.com
+Expires: 2027-09-01T00:00:00.000Z
+Canonical: https://mcphound.dev/.well-known/security.txt
+Policy: https://github.com/markdoyle4312-hash/mcphound/blob/main/SECURITY.md
+Preferred-Languages: en
