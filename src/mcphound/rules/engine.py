@@ -226,14 +226,24 @@ def _fetch_pypi_metadata(pkg: str) -> dict | None:
 # project_urls label text that counts as a discoverable source repository.
 # PyPI has no dedicated "repository" field like npm's package.json — authors
 # put a source link under an arbitrary project_urls label (e.g. "Source",
-# "Repository", "Code", "GitHub") or, less reliably, home_page.
+# "Repository", "Code", "GitHub"), or under an unrelated-sounding label like
+# "Home"/"Homepage" that happens to point straight at one, or home_page.
+# Checked against both the label AND the URL itself — label text alone missed
+# real cases (e.g. jupyter-mcp-server's PyPI metadata links its GitHub repo
+# under a plain "Home" label), found via the fp_sweep real-world corpus.
 _PYPI_SOURCE_URL_TERMS = ("source", "repository", "code", "github", "gitlab", "codeberg")
+_PYPI_SOURCE_HOSTS = ("github.com", "gitlab.com", "codeberg.org", "bitbucket.org", "sourcehut.org")
 
 
 def _pypi_has_repository(info: dict) -> bool:
     project_urls = info.get("project_urls") or {}
     for label, url in project_urls.items():
-        if url and any(term in label.lower() for term in _PYPI_SOURCE_URL_TERMS):
+        if not url:
+            continue
+        lowered_url = url.lower()
+        if any(term in label.lower() for term in _PYPI_SOURCE_URL_TERMS) or any(
+            host in lowered_url for host in _PYPI_SOURCE_HOSTS
+        ):
             return True
     home_page = info.get("home_page") or ""
     return bool(home_page) and "pypi.org" not in home_page

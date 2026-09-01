@@ -176,6 +176,20 @@ def test_pypi_provenance_rule_allows_package_with_source_url(monkeypatch):
     assert "MCP-STATIC-007" not in _finding_ids("mcp-benign-uvx.json", "MCP-STATIC-007")
 
 
+def test_pypi_provenance_rule_allows_repo_url_under_unrelated_label(monkeypatch):
+    # Regression test: jupyter-mcp-server's real PyPI metadata links its GitHub repo
+    # under a plain "Home" label (found via tests/fp_sweep's real-world corpus) — the
+    # label text alone doesn't say "source"/"repository", but the URL itself does.
+    from mcphound.rules import engine
+
+    monkeypatch.setattr(
+        engine,
+        "_fetch_pypi_metadata",
+        lambda pkg: {"info": {"project_urls": {"Home": "https://github.com/example/repo"}}},
+    )
+    assert "MCP-STATIC-007" not in _finding_ids("mcp-benign-uvx.json", "MCP-STATIC-007")
+
+
 def test_pypi_provenance_rule_skips_silently_on_network_failure(monkeypatch):
     from mcphound.rules import engine
 
