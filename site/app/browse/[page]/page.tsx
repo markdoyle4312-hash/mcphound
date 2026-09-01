@@ -72,7 +72,10 @@ export default async function BrowsePage({ params }: { params: Promise<{ page: s
 
       <nav className="mt-6 flex items-center gap-4 font-mono text-xs">
         {page > 1 ? (
-          <Link href={`/browse/${page - 1}`} className="text-paper underline hover:text-signal">
+          <Link
+            href={`/browse/${page - 1}`}
+            className="-my-3 inline-block py-3 text-paper underline hover:text-signal"
+          >
             ← previous
           </Link>
         ) : (
@@ -82,7 +85,10 @@ export default async function BrowsePage({ params }: { params: Promise<{ page: s
           page {page} of {pages}
         </span>
         {page < pages ? (
-          <Link href={`/browse/${page + 1}`} className="text-paper underline hover:text-signal">
+          <Link
+            href={`/browse/${page + 1}`}
+            className="-my-3 inline-block py-3 text-paper underline hover:text-signal"
+          >
             next →
           </Link>
         ) : (

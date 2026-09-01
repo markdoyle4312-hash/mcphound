@@ -1,7 +1,32 @@
 # Cloudflare Pages headers file — https://developers.cloudflare.com/pages/configuration/headers/
-# Static site, no auth/forms/DB, so HSTS is the one header actually load-bearing here.
+#
+# CAUTION if any Cloudflare zone-level feature ever gets turned on for this
+# domain: Rocket Loader and email-address obfuscation both rewrite HTML at
+# the edge by injecting their own inline <script> tags. That's compatible
+# with script-src below only because 'unsafe-inline' is already there for
+# Next's own hydration payload (see the CSP comment) — but if either
+# feature is ever enabled, reload a page and check the console for CSP
+# violations before assuming it still works.
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=(), interest-cohort=()
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+
+# script-src needs 'unsafe-inline' — verified empirically (see the
+# CSP-hardening writeup): Next's App Router static export always inlines
+# its React Server Components hydration payload as a per-page <script>
+# whose content differs on every page and every nightly rebuild, so
+# neither a fixed hash list nor a real nonce (no per-request server to
+# mint one) is viable without adding a Cloudflare Worker to rewrite every
+# response — out of scope for a static-export site today. This does NOT
+# cover the inline JSON-LD (Organization/WebSite/Review/BreadcrumbList/
+# FAQPage) added elsewhere: those use type="application/ld+json", which
+# browsers never treat as executable script, so they're unaffected by
+# script-src either way — confirmed with a real CSP + browser test, not
+# just docs.
 
 # Server-data shards (public/data/*.json) are rewritten by every nightly
 # deploy but keep the same filenames — never let the edge or a browser

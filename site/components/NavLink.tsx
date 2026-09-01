@@ -21,7 +21,10 @@ export function NavLink({
     <Link
       href={href}
       aria-current={isActive ? "page" : undefined}
-      className={`font-mono text-[11px] uppercase tracking-widest2 transition-colors hover:text-signal ${
+      // -my-3 py-3 grows the tap target to meet WCAG 2.2's 24px minimum
+      // (SC 2.5.8) without pushing the header row taller — the negative
+      // margin cancels the padding's effect on layout, not on hit-testing.
+      className={`-my-3 inline-block py-3 font-mono text-[11px] uppercase tracking-widest2 transition-colors hover:text-signal ${
         isActive ? "text-signal" : "text-paper-dim"
       }`}
     >

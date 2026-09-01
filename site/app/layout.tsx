@@ -143,18 +143,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-6 font-mono text-[11px] text-paper-dim">
             <p>Static analysis only — mcphound never executes a server to score it.</p>
             <div className="flex gap-5">
-              <Link href="/faq" className="transition-colors hover:text-signal">
+              <Link href="/faq" className="-my-3 inline-block py-3 transition-colors hover:text-signal">
                 FAQ
               </Link>
               <a
                 href="https://github.com/markdoyle4312-hash/mcphound"
-                className="transition-colors hover:text-signal"
+                className="-my-3 inline-block py-3 transition-colors hover:text-signal"
               >
                 Source
               </a>
               <a
                 href="https://pypi.org/project/mcphound/"
-                className="transition-colors hover:text-signal"
+                className="-my-3 inline-block py-3 transition-colors hover:text-signal"
               >
                 PyPI
               </a>
