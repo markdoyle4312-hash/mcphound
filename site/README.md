@@ -40,11 +40,19 @@ not via a git-triggered build — the export step needs live Postgres access,
 which only the CI runner has, and `data/` is never committed.
 
 It moved off Vercel because `output: "export"` plus `generateStaticParams()`
-over the full registry index produces one route per scanned server
-(~28k+ at current registry size), which blows well past Vercel's
-2,048-routes-per-deployment cap. Cloudflare Pages has no comparable route
-cap for a static export, and the site was already pure static output with
-no serverless/edge functions to lose.
+over the full registry index produced one route per scanned server
+(~28k+ at current registry size), which blew well past Vercel's
+2,048-routes-per-deployment cap. Cloudflare Pages turned out to have its
+own cap — 20,000 files on the Free plan (100,000 on paid plans) — which the
+same one-page-per-server approach hit within days. Server detail pages
+(`/servers/<name>`) are now a single static Client Component shell that
+fetches its data from one of 64 fixed-count JSON shards under
+`public/data/` (built by the `prebuild` npm script,
+`scripts/build-server-shards.ts`) at runtime, keyed by server name — so
+deployed file count no longer scales with registry size. A
+`public/_redirects` rule (`/servers/* /servers 200`) keeps `/servers/<name>`
+URLs resolving to that shell. `/browse/**` and `/typosquats/**` are
+unaffected — both stay small enough to prerender normally.
 
 The Cloudflare Pages project (`mcphound`) was created once via the
 dashboard/`wrangler pages project create` — the nightly job only ever
