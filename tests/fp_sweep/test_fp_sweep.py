@@ -3,8 +3,9 @@
 registry_top50.json holds real, source-verified MCP server configs (see SOURCES.md).
 The sweep (documented in CHANGELOG.md) found MCP-STATIC-004 and MCP-STATIC-007 are the
 only rules that legitimately fire on this corpus, and those firings are expected true
-positives (unpinned/@latest installs, and archived reference servers missing npm
-`repository` metadata) — not something a scan of this corpus should ever be silent on.
+positives (unpinned/@latest installs, and archived reference servers / sqlite / docker-mcp
+missing repository metadata on npm or PyPI) — not something a scan of this corpus should
+ever be silent on.
 
 This test locks that in: any OTHER rule firing here is a new false positive that needs
 the same tune-and-document treatment as the original sweep, and a change that makes 004
@@ -39,19 +40,33 @@ _FAKE_NPM_METADATA_NO_REPO = {"dist-tags": {"latest": "1.0.0"}, "versions": {"1.
 # confirmed (against the live registry, during the W7 sweep) to have no `repository` field.
 _PACKAGES_MISSING_REPO = ("server-brave-search", "server-puppeteer", "server-google-maps")
 
-# The server (config key) names those three packages correspond to in registry_top50.json.
-_EXPECTED_007_HITS = {"brave-search", "puppeteer", "google-maps"}
+# Same idea, PyPI side (uvx-launched corpus entries) — confirmed against the live PyPI
+# JSON API: neither package has a project_urls or home_page entry at all.
+_FAKE_PYPI_METADATA_WITH_REPO = {
+    "info": {"project_urls": {"Repository": "https://example.com/repo"}}
+}
+_FAKE_PYPI_METADATA_NO_REPO = {"info": {}}
+_PYPI_PACKAGES_MISSING_REPO = ("mcp-server-sqlite", "docker-mcp")
+
+# The server (config key) names those five packages correspond to in registry_top50.json.
+_EXPECTED_007_HITS = {"brave-search", "puppeteer", "google-maps", "sqlite", "docker-mcp"}
 
 _EXPECTED_RULES = {"MCP-STATIC-004", "MCP-STATIC-007"}
 
 
 def test_corpus_only_fires_known_rules(monkeypatch):
-    def fake_fetch(pkg: str) -> dict | None:
+    def fake_npm_fetch(pkg: str) -> dict | None:
         if any(missing in pkg for missing in _PACKAGES_MISSING_REPO):
             return _FAKE_NPM_METADATA_NO_REPO
         return _FAKE_NPM_METADATA_WITH_REPO
 
-    monkeypatch.setattr(engine, "_fetch_npm_metadata", fake_fetch)
+    def fake_pypi_fetch(pkg: str) -> dict | None:
+        if any(missing in pkg for missing in _PYPI_PACKAGES_MISSING_REPO):
+            return _FAKE_PYPI_METADATA_NO_REPO
+        return _FAKE_PYPI_METADATA_WITH_REPO
+
+    monkeypatch.setattr(engine, "_fetch_npm_metadata", fake_npm_fetch)
+    monkeypatch.setattr(engine, "_fetch_pypi_metadata", fake_pypi_fetch)
 
     servers = load_servers(CORPUS)
     assert len(servers) >= 30, "corpus shrank unexpectedly — check registry_top50.json"

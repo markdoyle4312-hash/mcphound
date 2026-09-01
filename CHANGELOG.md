@@ -6,12 +6,44 @@ SemVer strictly pre-1.0 (see ROADMAP.md).
 
 ## [Unreleased]
 
-### fix: MCP-STATIC-007 misleading finding message (#17)
+### rule: MCP-STATIC-007 extend to uvx/PyPI packages, add MCP-STATIC-008/009 (#29)
 
-Message said "no repository field" even when the real condition was a fully
-unpublished package (3/31 sampled cases in the W16 spot-check).
+`MCP-STATIC-007` (package provenance) only ever inspected npx-launched (npm)
+packages; now also checks uvx-launched (PyPI) packages via a project_urls/
+home_page lookup. Two new rules fill ROADMAP's W4 gap: `MCP-STATIC-008`
+flags an npm package whose resolved preinstall/install/postinstall script
+pipes a remote download into a shell; `MCP-STATIC-009` flags an npm or
+PyPI package first published within 30 days. Both reuse the npm/PyPI
+metadata fetchers added for 007, `network: true`, opt-in via `--deep`.
+
+### fix: MCP-STATIC-007 recognize a PyPI repo URL under any project_urls label (#29)
+
+The PyPI provenance check only matched a repository URL by project_urls
+label text ("source"/"repository"/"github") — a real package
+(`jupyter-mcp-server`) links its GitHub repo under a plain "Home" label,
+a false positive caught by re-running `tests/fp_sweep` against the
+real-world corpus. Now also checks the URL itself for a known source
+host. Also fixed `tests/fp_sweep` making live network calls to PyPI
+(never mocked `_fetch_pypi_metadata`).
+
+### fix: refresh uv's package cache before resolving mcphound in action.yml (#17)
+
+A runner with a warm `astral-sh/setup-uv` cache from before a given
+mcphound release was published resolved `uvx --from mcphound==<version>`
+against stale cached package-index metadata and failed with "no version
+of mcphound==X", even though the version was live on PyPI — confirmed
+against the real v0.1.5 publish. `--refresh-package mcphound` forces uv
+to revalidate that package's index data.
 
 ### fix: key registry-scan staleness off rule content, not package version (#18)
+
+### chore: release hardening — v1 tag docs, README, SECURITY.md, CI fixes, mypy (#20)
+
+Fixed a stale README status banner and an unpinned `docs/action.md` `v1`
+tag reference that would 404. Added `SECURITY.md` (GitHub private
+vulnerability reporting as the primary channel) and pointed
+`GOVERNANCE.md` at it. Stopped the CI SARIF smoke test's `|| true` from
+swallowing real crashes, not just expected findings.
 
 ### fix: migrate nightly site deploy from Vercel to Cloudflare Pages
 
@@ -41,6 +73,17 @@ existing `loadIndex`/`loadServer`). A `public/_redirects` rule
 shell. Deployed file count no longer scales with registry size — only
 `/browse`'s page count does, at ~1 page per 100 servers. See
 `docs/superpowers/specs/2026-09-01-server-detail-sharding-design.md`.
+
+### perf: batch N+1 registry-scan/scoring queries, cache nightly CI deps (#28)
+
+`run_scan` and `run_scoring` each issued 2-3 sequential Postgres round
+trips per version/server against the hosted registry DB — at ~25k
+in-scope versions that's 50-75k+ serial round trips, which is what
+pushed the nightly job long enough to need a manual cancel. Replaced
+with batched `DISTINCT ON` queries (chunked at 2000 ids per `IN`
+clause) that fetch the same "latest row per group" data in bulk. Also
+cache uv and npm deps in the nightly workflow to cut fixed setup time
+on every run.
 
 ## [0.1.5] — 2026-08-31
 

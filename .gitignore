@@ -22,5 +22,6 @@ artifacts/
 # private planning docs — never commit, see ROADMAP.md for the public roadmap
 mcp-security-tool-build-plan.md
 LAUNCH_POST.md
+STATE_OF_MCP_SECURITY.md
 docs/superpowers/
 

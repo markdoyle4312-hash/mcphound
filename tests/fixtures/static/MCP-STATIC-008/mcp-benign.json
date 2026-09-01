@@ -1,0 +1,9 @@
+{
+  "_canary": "MCPHOUND-FIXTURE-CANARY",
+  "mcpServers": {
+    "good": {
+      "command": "npx",
+      "args": ["-y", "some-trusted-mcp-pkg@1.0.0"]
+    }
+  }
+}

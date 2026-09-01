@@ -58,8 +58,8 @@ AI-assisted coding makes the scaffolding fast; most of the time goes to MCP SDK 
 
 ### Phase 4 — v1.0 enforcement + launch
 
-- [ ] **W18** — `mcp-policy.yaml` spec (allowed servers, pinned versions/hashes, max permissions, blocked registries) + CLI `allowlist init/enforce`.
-- [ ] **W19** — GitHub Action: on PR, diff MCP/agent config + skill dirs, post markdown risk report, fail on policy violation; Marketplace listing. *Done: action runs on a demo repo with green/red examples.*
+- [x] **W18** — `mcp-policy.yaml` spec (allowed servers, pinned versions/hashes, max permissions, blocked registries) + CLI `allowlist init/enforce`.
+- [x] **W19** — GitHub Action: on PR, diff MCP/agent config + skill dirs, post markdown risk report, fail on policy violation; Marketplace listing. *Done: action runs on a demo repo with green/red examples.*
 - [ ] **W20** — **"State of MCP Security" report**: aggregate real numbers (% no-auth, % dangerous permissions, typosquat count, rug-pulls observed).
 - [ ] **W21** — Launch: report + v1.0 tag. Notify every server author with a badge. *Done: v1.0 deployed.*
 
